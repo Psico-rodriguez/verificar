@@ -80,6 +80,7 @@ input,select,textarea{width:100%;padding:7px 9px;border:1px solid var(--bd);bord
 <h2>Nube y verificación</h2>
 <label>Clave de administrador</label><input id="qK" type="password" placeholder="La que puso en su script" autocomplete="off">
 <div id="cs" class="note" style="margin:6px 0">Sin conexión</div>
+<button class="btn s" id="qB" type="button">Conectar</button>
 <div class="ck"><input type="checkbox" id="cQ" checked><span>Incluir código QR de verificación</span></div>
 <label>Código del certificado</label><div class="up"><input id="qI" readonly><button class="btn s" id="qN" type="button" style="margin:0;width:auto">Nuevo</button></div>
 <button class="btn" id="pr" type="button">Registrar en la nube y descargar PDF</button>
@@ -119,23 +120,24 @@ $('dxl').addEventListener('input',e=>{const r=e.target.closest('.dxrow');if(!r||
 $('dxl').addEventListener('click',e=>{if(e.target.dataset.x){DX.splice(+e.target.closest('.dxrow').dataset.i,1);dxRows();render()}});
 $('dxa').onclick=()=>{const p=P[$('dxp').value];if(!p)return;document.querySelectorAll('input.sy:checked').forEach(c=>DX.push({s:c.value,c:p[SYS[c.value]],d:(c.value==='DSM-5-TR'&&p[4])||p[0]}));dxRows();render()};
 $('dxm').onclick=()=>{DX.push({s:'CIE-10',c:'',d:''});dxRows();render()};
-let ST,REG='',CON=false,CTX='',HASTA='';
+let ST,REG='',CON=false,CNX=false,CTX='',HASTA='';
 const CK='cae_clave';
 const url_=()=>typeof SCRIPT_URL==='string'&&SCRIPT_URL.startsWith('https://')?SCRIPT_URL:'';
 function jsonp(p){return new Promise((res,rej)=>{const id='m'+Math.random().toString(36).slice(2),f=document.createElement('iframe');f.style.display='none';let t;function cl(){clearTimeout(t);removeEventListener('message',h);f.remove()}function h(e){if(e.data&&e.data.id===id){cl();res(e.data.res)}}addEventListener('message',h);t=setTimeout(()=>{cl();rej(new Error('timeout'))},30000);f.src=url_()+'?'+new URLSearchParams(Object.assign({},p,{id}));document.body.appendChild(f)})}
-function post(a,d){return new Promise((res,rej)=>{const id='m'+Math.random().toString(36).slice(2),f=document.createElement('iframe'),fm=document.createElement('form'),i=document.createElement('input');f.name='f'+id;f.style.display='none';fm.method='POST';fm.action=url_();fm.target=f.name;fm.style.display='none';i.type='hidden';i.name='d';i.value=JSON.stringify(Object.assign({a,k:$('qK').value.trim(),id},d||{}));fm.appendChild(i);let t;function cl(){clearTimeout(t);removeEventListener('message',h);f.remove();fm.remove()}function h(e){if(e.data&&e.data.id===id){cl();res(e.data.res)}}addEventListener('message',h);t=setTimeout(()=>{cl();rej(new Error('timeout'))},40000);document.body.append(f,fm);fm.submit()})}
+function post(a,d){return new Promise((res,rej)=>{const id='m'+Math.random().toString(36).slice(2),f=document.createElement('iframe'),fm=document.createElement('form'),i=document.createElement('input');f.name='f'+id;f.style.display='none';fm.method='POST';fm.action=url_();fm.target=f.name;fm.style.display='none';i.type='hidden';i.name='d';i.value=JSON.stringify(Object.assign({a,k:$('qK').value.trim(),id},d||{}));fm.appendChild(i);let t;function cl(){clearTimeout(t);removeEventListener('message',h);f.remove();fm.remove()}function h(e){if(e.data&&e.data.id===id){cl();res(e.data.res)}}addEventListener('message',h);t=setTimeout(()=>{cl();rej(new Error('timeout'))},25000);document.body.append(f,fm);fm.submit()})}
 function stat(t,ok){const e=$('cs');e.textContent=t;e.style.borderColor=ok?'#1a7f4b':'#b42318'}
 function newId(){const a='ABCDEFGHJKMNPQRSTUVWXYZ23456789';return Array.from(crypto.getRandomValues(new Uint8Array(12)),x=>a[x%a.length]).join('')}
 const fmtId=c=>c.replace(/(.{4})(?=.)/g,'$1-');
 function rec(){const dd=$('tC').value.trim();return{codigo:$('qI').value.replace(/-/g,''),estado:'vigente',emision:$('fX').value,vigencia_hasta:HASTA,profesional:$('pN').value.trim(),tp:$('pTP').value.trim(),consultante:($('tG').value?$('tG').value+' ':'')+$('tN').value.trim(),documento:dd?$('tD').value+' N.\u00b0 '+(dd.length>4?'*'.repeat(dd.length-4)+dd.slice(-4):dd):'',animal:$('aN').value.trim(),especie:$('aE').value,raza:$('aR').value.trim(),nacimiento:$('aB').value,sexo:$('aS').value,contextos:CTX}}
-async function conectar(){if(!url_()){stat('Falta configurar config.js',false);return}
+async function conectar(){if(CNX)return;if(!url_()){stat('Falta configurar config.js',false);return}CNX=true;stat('Conectando… (puede tardar unos segundos)',true);try{await conectar2()}finally{CNX=false}}
+async function conectar2(){
  try{const r=await post('perfil_get');if(!r.ok){CON=false;stat(r.e==='clave'?'Clave incorrecta':'Error de conexi\u00f3n',false);return}
   CON=true;stat('Conectado \u2713',true);try{localStorage.setItem(CK,$('qK').value.trim())}catch(e){}
   const p=r.p||{};if(p.campos)PF.forEach(k=>{if(p.campos[k]!=null)$(k).value=p.campos[k]});if(p.firma)IMG.f=p.firma;if(p.sello)IMG.s=p.sello;render()}
- catch(e){CON=false;stat('No se pudo conectar. Revise la URL en config.js',false)}}
+ catch(e){CON=false;stat('Sin respuesta de Google. Revise que publicó la nueva versión del script y que la URL de config.js es la correcta.',false)}}
 async function cloudSave(){if(!CON)return;try{const campos={};PF.forEach(k=>campos[k]=$(k).value);await post('perfil_set',{p:{campos,firma:IMG.f,sello:IMG.s}});stat('Conectado \u2713 perfil guardado',true)}catch(e){stat('No se pudo guardar el perfil',false)}}
 function init(){let c='';try{c=localStorage.getItem(CK)||''}catch(e){}$('qK').value=c;if(c)conectar();else stat('Escriba su clave para conectarse',false)}
-$('qK').addEventListener('change',conectar);
+$('qK').addEventListener('change',conectar);$('qK').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();conectar()}});$('qB').onclick=conectar;
 $('qN').onclick=()=>{$('qI').value=fmtId(newId());REG='';render()};
 const SK='cae_prof_v1',PF=['pG','pTP','pN','pT','pC','pM','pX'];
 function save(){try{const o={IMG};PF.forEach(k=>o[k]=$(k).value);localStorage.setItem(SK,JSON.stringify(o))}catch(e){}clearTimeout(ST);ST=setTimeout(cloudSave,1500)}
