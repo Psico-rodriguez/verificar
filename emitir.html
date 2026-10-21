@@ -122,14 +122,14 @@ $('dxm').onclick=()=>{DX.push({s:'CIE-10',c:'',d:''});dxRows();render()};
 let ST,REG='',CON=false,CTX='',HASTA='';
 const CK='cae_clave';
 const url_=()=>typeof SCRIPT_URL==='string'&&SCRIPT_URL.startsWith('https://')?SCRIPT_URL:'';
-function jsonp(p){return new Promise((res,rej)=>{const cb='cb'+Math.random().toString(36).slice(2),s=document.createElement('script');let t;const cl=()=>{clearTimeout(t);delete window[cb];s.remove()};t=setTimeout(()=>{cl();rej(new Error('timeout'))},25000);window[cb]=d=>{cl();res(d)};s.onerror=()=>{cl();rej(new Error('red'))};s.src=url_()+'?'+new URLSearchParams(Object.assign({},p,{callback:cb}));document.head.appendChild(s)})}
-async function post(a,d){await fetch(url_(),{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(Object.assign({a,k:$('qK').value.trim()},d||{}))})}
+function jsonp(p){return new Promise((res,rej)=>{const id='m'+Math.random().toString(36).slice(2),f=document.createElement('iframe');f.style.display='none';let t;function cl(){clearTimeout(t);removeEventListener('message',h);f.remove()}function h(e){if(e.data&&e.data.id===id){cl();res(e.data.res)}}addEventListener('message',h);t=setTimeout(()=>{cl();rej(new Error('timeout'))},30000);f.src=url_()+'?'+new URLSearchParams(Object.assign({},p,{id}));document.body.appendChild(f)})}
+function post(a,d){return new Promise((res,rej)=>{const id='m'+Math.random().toString(36).slice(2),f=document.createElement('iframe'),fm=document.createElement('form'),i=document.createElement('input');f.name='f'+id;f.style.display='none';fm.method='POST';fm.action=url_();fm.target=f.name;fm.style.display='none';i.type='hidden';i.name='d';i.value=JSON.stringify(Object.assign({a,k:$('qK').value.trim(),id},d||{}));fm.appendChild(i);let t;function cl(){clearTimeout(t);removeEventListener('message',h);f.remove();fm.remove()}function h(e){if(e.data&&e.data.id===id){cl();res(e.data.res)}}addEventListener('message',h);t=setTimeout(()=>{cl();rej(new Error('timeout'))},40000);document.body.append(f,fm);fm.submit()})}
 function stat(t,ok){const e=$('cs');e.textContent=t;e.style.borderColor=ok?'#1a7f4b':'#b42318'}
 function newId(){const a='ABCDEFGHJKMNPQRSTUVWXYZ23456789';return Array.from(crypto.getRandomValues(new Uint8Array(12)),x=>a[x%a.length]).join('')}
 const fmtId=c=>c.replace(/(.{4})(?=.)/g,'$1-');
 function rec(){const dd=$('tC').value.trim();return{codigo:$('qI').value.replace(/-/g,''),estado:'vigente',emision:$('fX').value,vigencia_hasta:HASTA,profesional:$('pN').value.trim(),tp:$('pTP').value.trim(),consultante:($('tG').value?$('tG').value+' ':'')+$('tN').value.trim(),documento:dd?$('tD').value+' N.\u00b0 '+(dd.length>4?'*'.repeat(dd.length-4)+dd.slice(-4):dd):'',animal:$('aN').value.trim(),especie:$('aE').value,raza:$('aR').value.trim(),nacimiento:$('aB').value,sexo:$('aS').value,contextos:CTX}}
 async function conectar(){if(!url_()){stat('Falta configurar config.js',false);return}
- try{const r=await jsonp({a:'perfil_get',k:$('qK').value.trim()});if(!r.ok){CON=false;stat(r.e==='clave'?'Clave incorrecta':'Error de conexi\u00f3n',false);return}
+ try{const r=await post('perfil_get');if(!r.ok){CON=false;stat(r.e==='clave'?'Clave incorrecta':'Error de conexi\u00f3n',false);return}
   CON=true;stat('Conectado \u2713',true);try{localStorage.setItem(CK,$('qK').value.trim())}catch(e){}
   const p=r.p||{};if(p.campos)PF.forEach(k=>{if(p.campos[k]!=null)$(k).value=p.campos[k]});if(p.firma)IMG.f=p.firma;if(p.sello)IMG.s=p.sello;render()}
  catch(e){CON=false;stat('No se pudo conectar. Revise la URL en config.js',false)}}
@@ -185,7 +185,7 @@ $('pr').onclick=async()=>{
  const b=$('pr');b.disabled=true;b.textContent='Registrando…';
  try{const R=rec(),ex=await jsonp({c:R.codigo});
   if(ex.ok&&REG!==$('qI').value){alert('Ese código ya existe. Pulse "Nuevo" e intente de nuevo.');return}
-  await post('emitir',{upd:!!ex.ok,r:R});
+  const rp=await post('emitir',{upd:!!ex.ok,r:R});if(!rp||!rp.ok){alert(rp&&rp.e==='clave'?'Clave incorrecta.':'No se pudo registrar: '+((rp&&rp.e)||'sin respuesta'));return}
   let ok=false;for(let i=0;i<8&&!ok;i++){await new Promise(r=>setTimeout(r,1500));const c=await jsonp({c:R.codigo});ok=!!(c.ok&&c.r&&c.r.consultante===R.consultante&&c.r.animal===R.animal)}
   if(!ok){alert('No se pudo confirmar el registro. Revise su clave y su conexión: el certificado NO fue emitido.');return}
   REG=$('qI').value;stat('Registrado en la nube ✓ '+REG,true);setTimeout(()=>{try{window.print()}catch(e){alert('Use Ctrl/Cmd + P para guardar como PDF.')}},200)}

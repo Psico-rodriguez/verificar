@@ -29,7 +29,8 @@ details{margin-top:16px;font-size:14px}summary{cursor:pointer;color:#0d4a9e;font
 const $=i=>document.getElementById(i),esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const fb=s=>{s=String(s||'');const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(s);return m?m[3]+'/'+m[2]+'/'+m[1]:(s||'—')};
 const box=(k,t,b)=>`<div class="b ${k}"><h2>${t}</h2>${b||''}</div>`;
-function jsonp(p){return new Promise((res,rej)=>{const cb='cb'+Math.random().toString(36).slice(2),s=document.createElement('script');let t;const cl=()=>{clearTimeout(t);delete window[cb];s.remove()};t=setTimeout(()=>{cl();rej(new Error('timeout'))},25000);window[cb]=d=>{cl();res(d)};s.onerror=()=>{cl();rej(new Error('red'))};s.src=SCRIPT_URL+'?'+new URLSearchParams(Object.assign({},p,{callback:cb}));document.head.appendChild(s)})}
+const url_=()=>SCRIPT_URL;
+function jsonp(p){return new Promise((res,rej)=>{const id='m'+Math.random().toString(36).slice(2),f=document.createElement('iframe');f.style.display='none';let t;function cl(){clearTimeout(t);removeEventListener('message',h);f.remove()}function h(e){if(e.data&&e.data.id===id){cl();res(e.data.res)}}addEventListener('message',h);t=setTimeout(()=>{cl();rej(new Error('timeout'))},30000);f.src=url_()+'?'+new URLSearchParams(Object.assign({},p,{id}));document.body.appendChild(f)})}
 let cur=null;
 async function go(){
  const c=$('c').value.toUpperCase().replace(/[^A-Z0-9]/g,'');cur=null;$('dt').innerHTML='';
