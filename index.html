@@ -29,16 +29,15 @@ details{margin-top:16px;font-size:14px}summary{cursor:pointer;color:#0d4a9e;font
 const $=i=>document.getElementById(i),esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const fb=s=>{s=String(s||'');const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(s);return m?m[3]+'/'+m[2]+'/'+m[1]:(s||'—')};
 const box=(k,t,b)=>`<div class="b ${k}"><h2>${t}</h2>${b||''}</div>`;
-const url_=()=>SCRIPT_URL;
-function jsonp(p){return new Promise((res,rej)=>{const id='m'+Math.random().toString(36).slice(2),f=document.createElement('iframe');f.style.display='none';let t;function cl(){clearTimeout(t);removeEventListener('message',h);f.remove()}function h(e){if(e.data&&e.data.id===id){cl();res(e.data.res)}}addEventListener('message',h);t=setTimeout(()=>{cl();rej(new Error('timeout'))},30000);f.src=url_()+'?'+new URLSearchParams(Object.assign({},p,{id}));document.body.appendChild(f)})}
+async function buscar(c){const r=await fetch('https://firestore.googleapis.com/v1/projects/'+FB.projectId+'/databases/(default)/documents/certificados/'+c);if(r.status===404||r.status===403&&false)return{ok:false};if(!r.ok)throw new Error(r.status);const d=await r.json(),o={};for(const k in(d.fields||{}))o[k]=Object.values(d.fields[k])[0];return{ok:true,r:o}}
 let cur=null;
 async function go(){
  const c=$('c').value.toUpperCase().replace(/[^A-Z0-9]/g,'');cur=null;$('dt').innerHTML='';
  if(!c){$('r').innerHTML='';return}
- if(typeof SCRIPT_URL==='undefined'||!SCRIPT_URL.startsWith('https://')){$('r').innerHTML=box('wa','Página sin configurar','<p>Falta la dirección de la nube en config.js.</p>');return}
+ if(typeof FB==='undefined'||!FB.projectId||String(FB.projectId).startsWith('PEGUE')){$('r').innerHTML=box('wa','Página sin configurar','<p>Falta la dirección de la nube en config.js.</p>');return}
  if(c.length<12){$('r').innerHTML=box('no','Código incompleto','<p>El código tiene 12 caracteres.</p>');return}
  $('r').innerHTML='<p>Consultando…</p>';
- let j;try{j=await jsonp({c})}catch(e){$('r').innerHTML=box('wa','No se pudo consultar','<p>Intente de nuevo en unos minutos.</p>');return}
+ let j;try{j=await buscar(c)}catch(e){$('r').innerHTML=box('wa','No se pudo consultar','<p>Intente de nuevo en unos minutos.</p>');return}
  if(!j.ok){$('r').innerHTML=box('no','Código no encontrado','<p>No existe un certificado registrado con este código. Desconfíe del documento.</p>');return}
  const x=cur=j.r,hoy=new Date().toISOString().slice(0,10),est=String(x.estado||'').toLowerCase();
  const d=`<dl><dt>Código</dt><dd>${esc(c.replace(/(.{4})(?=.)/g,'$1-'))}</dd><dt>Profesional</dt><dd>${esc(x.profesional)}</dd><dt>T.P. N.°</dt><dd>${esc(x.tp)} (COLPSIC)</dd><dt>Emisión</dt><dd>${fb(x.emision)}</dd><dt>Vigente hasta</dt><dd>${x.vigencia_hasta?fb(x.vigencia_hasta):'No indicada'}</dd></dl>`;

@@ -78,7 +78,7 @@ input,select,textarea{width:100%;padding:7px 9px;border:1px solid var(--bd);bord
 
 <label>Observaciones adicionales (opcional)</label><textarea id="ob" rows="2"></textarea>
 <h2>Nube y verificación</h2>
-<label>Clave de administrador</label><input id="qK" type="password" placeholder="La que puso en su script" autocomplete="off">
+<label>Correo de administrador</label><input id="qE" type="email" autocomplete="off"><label>Contraseña de administrador</label><input id="qK" type="password" placeholder="La de su usuario de Firebase" autocomplete="off">
 <div id="cs" class="note" style="margin:6px 0">Sin conexión</div>
 <button class="btn s" id="qB" type="button">Conectar</button>
 <div class="ck"><input type="checkbox" id="cQ" checked><span>Incluir código QR de verificación</span></div>
@@ -122,21 +122,27 @@ $('dxa').onclick=()=>{const p=P[$('dxp').value];if(!p)return;document.querySelec
 $('dxm').onclick=()=>{DX.push({s:'CIE-10',c:'',d:''});dxRows();render()};
 let ST,REG='',CON=false,CNX=false,CTX='',HASTA='';
 const CK='cae_clave';
-const url_=()=>typeof SCRIPT_URL==='string'&&SCRIPT_URL.startsWith('https://')?SCRIPT_URL:'';
-function jsonp(p){return new Promise((res,rej)=>{const id='m'+Math.random().toString(36).slice(2),f=document.createElement('iframe');f.style.display='none';let t;function cl(){clearTimeout(t);removeEventListener('message',h);f.remove()}function h(e){if(e.data&&e.data.id===id){cl();res(e.data.res)}}addEventListener('message',h);t=setTimeout(()=>{cl();rej(new Error('timeout'))},30000);f.src=url_()+'?'+new URLSearchParams(Object.assign({},p,{id}));document.body.appendChild(f)})}
-function post(a,d){return new Promise((res,rej)=>{const id='m'+Math.random().toString(36).slice(2),f=document.createElement('iframe'),fm=document.createElement('form'),i=document.createElement('input');f.name='f'+id;f.style.display='none';fm.method='POST';fm.action=url_();fm.target=f.name;fm.style.display='none';i.type='hidden';i.name='d';i.value=JSON.stringify(Object.assign({a,k:$('qK').value.trim(),id},d||{}));fm.appendChild(i);let t;function cl(){clearTimeout(t);removeEventListener('message',h);f.remove();fm.remove()}function h(e){if(e.data&&e.data.id===id){cl();res(e.data.res)}}addEventListener('message',h);t=setTimeout(()=>{cl();rej(new Error('timeout'))},25000);document.body.append(f,fm);fm.submit()})}
+const FBC=typeof FB==='object'?FB:{};
+const url_=()=>FBC.projectId&&!String(FBC.projectId).startsWith('PEGUE')?FBC.projectId:'';
+const fsb=()=>'https://firestore.googleapis.com/v1/projects/'+FBC.projectId+'/databases/(default)/documents';
+let TOK='';
+const enc=o=>{const f={};for(const k in o)f[k]={stringValue:String(o[k]==null?'':o[k])};return{fields:f}};
+const dec=d=>{const o={};for(const k in(d.fields||{}))o[k]=Object.values(d.fields[k])[0];return o};
+async function login(){const r=await fetch('https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key='+FBC.apiKey,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:$('qE').value.trim(),password:$('qK').value,returnSecureToken:true})});const j=await r.json();if(!r.ok)throw new Error((j.error&&j.error.message)||'login');TOK=j.idToken;return TOK}
+async function fs(method,path,body,tok){const r=await fetch(fsb()+path,{method,headers:Object.assign({'Content-Type':'application/json'},tok?{Authorization:'Bearer '+tok}:{}),body:body?JSON.stringify(body):undefined});let j={};try{j=await r.json()}catch(e){}return{s:r.status,j}}
 function stat(t,ok){const e=$('cs');e.textContent=t;e.style.borderColor=ok?'#1a7f4b':'#b42318'}
 function newId(){const a='ABCDEFGHJKMNPQRSTUVWXYZ23456789';return Array.from(crypto.getRandomValues(new Uint8Array(12)),x=>a[x%a.length]).join('')}
 const fmtId=c=>c.replace(/(.{4})(?=.)/g,'$1-');
 function rec(){const dd=$('tC').value.trim();return{codigo:$('qI').value.replace(/-/g,''),estado:'vigente',emision:$('fX').value,vigencia_hasta:HASTA,profesional:$('pN').value.trim(),tp:$('pTP').value.trim(),consultante:($('tG').value?$('tG').value+' ':'')+$('tN').value.trim(),documento:dd?$('tD').value+' N.\u00b0 '+(dd.length>4?'*'.repeat(dd.length-4)+dd.slice(-4):dd):'',animal:$('aN').value.trim(),especie:$('aE').value,raza:$('aR').value.trim(),nacimiento:$('aB').value,sexo:$('aS').value,contextos:CTX}}
 async function conectar(){if(CNX)return;if(!url_()){stat('Falta configurar config.js',false);return}CNX=true;stat('Conectando… (puede tardar unos segundos)',true);try{await conectar2()}finally{CNX=false}}
 async function conectar2(){
- try{const r=await post('perfil_get');if(!r.ok){CON=false;stat(r.e==='clave'?'Clave incorrecta':'Error de conexi\u00f3n',false);return}
-  CON=true;stat('Conectado \u2713',true);try{localStorage.setItem(CK,$('qK').value.trim())}catch(e){}
-  const p=r.p||{};if(p.campos)PF.forEach(k=>{if(p.campos[k]!=null)$(k).value=p.campos[k]});if(p.firma)IMG.f=p.firma;if(p.sello)IMG.s=p.sello;render()}
- catch(e){CON=false;stat('Sin respuesta de Google. Revise que publicó la nueva versión del script y que la URL de config.js es la correcta.',false)}}
-async function cloudSave(){if(!CON)return;try{const campos={};PF.forEach(k=>campos[k]=$(k).value);await post('perfil_set',{p:{campos,firma:IMG.f,sello:IMG.s}});stat('Conectado \u2713 perfil guardado',true)}catch(e){stat('No se pudo guardar el perfil',false)}}
-function init(){let c='';try{c=localStorage.getItem(CK)||''}catch(e){}$('qK').value=c;if(c)conectar();else stat('Escriba su clave para conectarse',false)}
+ if(!FBC.apiKey||String(FBC.apiKey).startsWith('PEGUE')){stat('Falta configurar config.js',false);return}
+ try{await login();CON=true;stat('Conectado \u2713',true);try{localStorage.setItem('cae_mail',$('qE').value.trim())}catch(e){}
+  const r=await fs('GET','/perfil/principal',null,TOK);
+  if(r.s===200){const p=dec(r.j);if(p.campos){try{const c=JSON.parse(p.campos);PF.forEach(k=>{if(c[k]!=null)$(k).value=c[k]})}catch(e){}}if(p.firma)IMG.f=p.firma;if(p.sello)IMG.s=p.sello;render()}}
+ catch(e){CON=false;const m=String(e.message||e);stat(/PASSWORD|EMAIL|CREDENTIAL|INVALID/i.test(m)?'Correo o contrase\u00f1a incorrectos':'No se pudo conectar: '+m,false)}}
+async function cloudSave(){if(!CON)return;try{const campos={};PF.forEach(k=>campos[k]=$(k).value);await login();const r=await fs('PATCH','/perfil/principal',enc({campos:JSON.stringify(campos),firma:IMG.f,sello:IMG.s}),TOK);stat(r.s===200?'Conectado \u2713 perfil guardado':'No se pudo guardar el perfil ('+r.s+')',r.s===200)}catch(e){stat('No se pudo guardar el perfil',false)}}
+function init(){try{$('qE').value=localStorage.getItem('cae_mail')||''}catch(e){}stat('Escriba su correo y contraseña y pulse Conectar',false)}
 $('qK').addEventListener('change',conectar);$('qK').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();conectar()}});$('qB').onclick=conectar;
 $('qN').onclick=()=>{$('qI').value=fmtId(newId());REG='';render()};
 const SK='cae_prof_v1',PF=['pG','pTP','pN','pT','pC','pM','pX'];
@@ -182,16 +188,16 @@ $('fF').onchange=e=>img(e.target,'f');$('fS').onchange=e=>img(e.target,'s');
 $('clr').onclick=()=>{IMG={f:'',s:''};$('fF').value='';$('fS').value='';save();render()};
 $('rs').onclick=()=>{['tN','tC','aN','aR','aB','aM','aS','fE','ob'].forEach(k=>$(k).value='');DX=[];dxRows();$('qI').value=fmtId(newId());REG='';$('cD').checked=false;$('cK').checked=false;$('dxz').hidden=true;render()};
 $('pr').onclick=async()=>{
- if(!CON){alert('Conéctese primero: escriba su clave de administrador.');return}
+ if(!CON){alert('Con\u00e9ctese primero: escriba su correo y contrase\u00f1a y pulse Conectar.');return}
  if(!$('tN').value.trim()||!$('aN').value.trim()||!$('pN').value.trim()||!$('pTP').value.trim()){alert('Complete al menos: nombre del profesional, T.P., nombre del consultante y nombre del animal.');return}
- const b=$('pr');b.disabled=true;b.textContent='Registrando…';
- try{const R=rec(),ex=await jsonp({c:R.codigo});
-  if(ex.ok&&REG!==$('qI').value){alert('Ese código ya existe. Pulse "Nuevo" e intente de nuevo.');return}
-  const rp=await post('emitir',{upd:!!ex.ok,r:R});if(!rp||!rp.ok){alert(rp&&rp.e==='clave'?'Clave incorrecta.':'No se pudo registrar: '+((rp&&rp.e)||'sin respuesta'));return}
-  let ok=false;for(let i=0;i<8&&!ok;i++){await new Promise(r=>setTimeout(r,1500));const c=await jsonp({c:R.codigo});ok=!!(c.ok&&c.r&&c.r.consultante===R.consultante&&c.r.animal===R.animal)}
-  if(!ok){alert('No se pudo confirmar el registro. Revise su clave y su conexión: el certificado NO fue emitido.');return}
-  REG=$('qI').value;stat('Registrado en la nube ✓ '+REG,true);setTimeout(()=>{try{window.print()}catch(e){alert('Use Ctrl/Cmd + P para guardar como PDF.')}},200)}
- catch(e){alert('Sin conexión con la nube. El certificado NO fue registrado.')}
+ const b=$('pr');b.disabled=true;b.textContent='Registrando\u2026';
+ try{const R=rec(),tok=await login(),id=R.codigo;let r;
+  if(REG&&REG===$('qI').value){const m=Object.keys(R).filter(k=>k!=='codigo'&&k!=='estado').map(k=>'updateMask.fieldPaths='+k).join('&');r=await fs('PATCH','/certificados/'+id+'?'+m,enc(R),tok)}
+  else r=await fs('POST','/certificados?documentId='+id,enc(Object.assign({hash:''},R)),tok);
+  if(r.s===409){alert('Ese c\u00f3digo ya existe. Pulse "Nuevo" e intente de nuevo.');return}
+  if(r.s!==200){alert('No se pudo registrar (error '+r.s+'). Revise las reglas de Firestore.');return}
+  REG=$('qI').value;stat('Registrado en la nube \u2713 '+REG,true);setTimeout(()=>{try{window.print()}catch(e){alert('Use Ctrl/Cmd + P para guardar como PDF.')}},200)}
+ catch(e){alert('Sin conexi\u00f3n con la nube. El certificado NO fue registrado.')}
  finally{b.disabled=false;b.textContent='Registrar en la nube y descargar PDF'}};
 window.addEventListener('resize',fit);
 const t=new Date();$('fX').value=t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');
