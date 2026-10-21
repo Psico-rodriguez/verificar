@@ -4,7 +4,7 @@
 <style>
 :root{--bg:#dfeaf7}@media(prefers-color-scheme:dark){:root{--bg:#0e1726}}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);font:15px/1.5 system-ui,sans-serif;color:#1b2a41;padding:14px}
-.sheet{position:relative;max-width:640px;margin:auto;background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 4px 24px rgba(10,40,90,.2);padding-bottom:70px}
+.sheet{position:relative;max-width:820px;margin:auto;background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 4px 24px rgba(10,40,90,.2);padding-bottom:70px}
 .deco{position:absolute;left:0;width:100%;pointer-events:none}
 header{position:relative;display:flex;justify-content:space-between;align-items:flex-start;padding:28px 28px 0}
 .who{padding-top:22px}.who b{display:block;font:600 20px/1.2 Georgia,serif;color:#0d3b8e}.who span{display:block;border-top:2px solid #2a8fdc;margin-top:5px;padding-top:3px;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#3d5f94}
@@ -30,6 +30,9 @@ const $=i=>document.getElementById(i),esc=s=>String(s??'').replace(/[&<>"]/g,c=>
 const fb=s=>{s=String(s||'');const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(s);return m?m[3]+'/'+m[2]+'/'+m[1]:(s||'—')};
 const box=(k,t,b)=>`<div class="b ${k}"><h2>${t}</h2>${b||''}</div>`;
 async function buscar(c){const r=await fetch('https://firestore.googleapis.com/v1/projects/'+FB.projectId+'/databases/(default)/documents/certificados/'+c);if(r.status===404||r.status===403&&false)return{ok:false};if(!r.ok)throw new Error(r.status);const d=await r.json(),o={};for(const k in(d.fields||{}))o[k]=Object.values(d.fields[k])[0];return{ok:true,r:o}}
+function escala(){const w=$('dw'),f=$('df');if(!w||!f)return;const s=Math.min(1,w.clientWidth/794);f.style.transform='scale('+s+')';w.style.height=(1123*s)+'px'}
+function mostrarDoc(h){$('dt').innerHTML='<div class="sec" style="padding:8px"><h3>Documento original</h3><div id="dw" style="position:relative;overflow:hidden"><iframe id="df" sandbox="allow-same-origin allow-modals" style="border:0;width:794px;height:1123px;transform-origin:0 0;background:#fff"></iframe></div><button id="dp" type="button" style="margin-top:10px">Descargar / imprimir PDF</button><p style="margin:8px 0 0;font-size:12px;color:#5b6b85">Compare este documento con el que tiene en la mano.</p></div>';const f=$('df');f.srcdoc=h;escala();$('dp').onclick=()=>{try{f.contentWindow.focus();f.contentWindow.print()}catch(e){alert('Use Ctrl+P para imprimir o guardar como PDF.')}}}
+addEventListener('resize',escala);
 let cur=null;
 async function go(){
  const c=$('c').value.toUpperCase().replace(/[^A-Z0-9]/g,'');cur=null;$('dt').innerHTML='';
@@ -44,7 +47,7 @@ async function go(){
  if(est==='revocado')$('r').innerHTML=box('no','Certificado REVOCADO','<p>Este certificado fue anulado por el profesional.</p>'+d);
  else if(x.vigencia_hasta&&hoy>x.vigencia_hasta)$('r').innerHTML=box('wa','Certificado auténtico, pero vencido',d);
  else $('r').innerHTML=box('ok','Certificado auténtico y vigente',d);
- $('dt').innerHTML=`<div class="sec"><h3>Consultante</h3><dl><dt>Nombre</dt><dd>${esc(x.consultante||'—')}</dd><dt>Documento</dt><dd>${esc(x.documento||'—')}</dd></dl></div>
+ if(x.copia)mostrarDoc(x.copia);else $('dt').innerHTML=`<div class="sec"><h3>Consultante</h3><dl><dt>Nombre</dt><dd>${esc(x.consultante||'—')}</dd><dt>Documento</dt><dd>${esc(x.documento||'—')}</dd></dl></div>
  <div class="sec"><h3>Animal de soporte emocional</h3><dl><dt>Nombre</dt><dd>${esc(x.animal||'—')}</dd><dt>Especie</dt><dd>${esc(x.especie||'—')}</dd><dt>Raza</dt><dd>${esc(x.raza||'—')}</dd><dt>Nacimiento</dt><dd>${fb(x.nacimiento)}</dd>${x.sexo?'<dt>Sexo</dt><dd>'+esc(x.sexo)+'</dd>':''}</dl></div>
  <div class="sec"><h3>Determinación profesional</h3><p style="margin:0">El profesional determinó la necesidad de que la persona cuente con su animal de soporte emocional como parte del tratamiento, manejo o estabilización de una condición de salud mental documentada, en los términos de la Ley 2473 de 2025.${x.contextos?' Acompañamiento '+esc(x.contextos)+', según las condiciones de cada entidad.':''}</p></div>`;
 }
