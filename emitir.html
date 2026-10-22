@@ -35,7 +35,7 @@ input,select,textarea{width:100%;padding:7px 9px;border:1px solid var(--bd);bord
 .rule{width:230px;height:2px;margin:0 auto 12px;background:linear-gradient(90deg,transparent,#2a8fdc,transparent)}
 .cert{text-align:center;font:700 13px system-ui,sans-serif;letter-spacing:.12em;margin:12px 0 4px;color:#0d3b8e}
 .an{display:grid;grid-template-columns:1fr 1fr;gap:2px 24px;margin:8px 0;padding:8px 14px;border:1px solid #b9d6f1;border-radius:10px;background:#f3f8fe;font-size:13px;line-height:1.55;text-align:left}
-.bd p{margin:6px 0}.sm{font-size:11.5px;line-height:1.5;color:#33465f}
+.bd p{margin:6px 0}.nota{font-size:11.5px;line-height:1.5;color:#1b2a41;border-top:1px solid #b9d6f1;padding-top:6px;margin:8px 0 4px}.sm{font-size:11.5px;line-height:1.5;color:#33465f}
 .ph{color:#8a9bb5;background:#eef4fb;border-radius:3px;padding:0 2px}
 .sg{display:flex;gap:30px;align-items:flex-end;margin-top:14px}
 .sg .f{width:250px;text-align:left}.fx{height:78px;display:flex;align-items:flex-end}.fx img{max-height:78px;max-width:240px;mix-blend-mode:multiply}
@@ -57,11 +57,11 @@ input,select,textarea{width:100%;padding:7px 9px;border:1px solid var(--bd);bord
 <button class="btn s" id="clr" type="button">Quitar firma y sello</button>
 <h2>Consultante</h2>
 <div class="r2"><div><label>Tratamiento</label><select id="tG"><option>Sr.</option><option>Sra.</option><option value="">Sin género</option></select></div><div><label>Tipo de documento</label><select id="tD"><option>C.C.</option><option>T.I.</option><option>C.E.</option><option>Pasaporte</option><option>PPT</option></select></div></div>
-<label>Nombre completo</label><input id="tN"><label>N.° de documento</label><input id="tC">
+<label>Nombre completo</label><input id="tN"><label>N.° de documento</label><input id="tC"><label>Fecha de nacimiento (opcional)</label><input id="tB" type="date">
 <h2>Animal de soporte emocional</h2>
 <label>Nombre</label><input id="aN">
 <div class="r2"><div><label>Especie</label><select id="aE"><option>Canino</option><option>Felino</option><option>Otro doméstico</option></select></div><div><label>Sexo</label><select id="aS"><option value="">—</option><option>Macho</option><option>Hembra</option></select></div></div>
-<label>Raza</label><input id="aR"><div class="r2"><div><label>Fecha de nacimiento</label><input id="aB" type="date"></div><div><label>Microchip (opcional)</label><input id="aM"></div></div>
+<label>Raza</label><input id="aR"><label>Pelaje / coloración (opcional)</label><input id="aCo" placeholder="Ej. negro con manchas blancas"><div class="r2"><div><label>Fecha de nacimiento</label><input id="aB" type="date"></div><div><label>Microchip (opcional)</label><input id="aM"></div></div>
 <h2>Certificación</h2>
 <div class="r2"><div><label>Fecha de evaluación</label><input id="fE" type="date"></div><div><label>Fecha de expedición</label><input id="fX" type="date"></div></div>
 <label>Vigencia</label><input id="vg" value="12 meses">
@@ -115,11 +115,11 @@ const fb=s=>{if(!s)return'<span class="ph">[fecha de nacimiento]</span>';const[y
 let IMG={f:'',s:''},DX=[];
 const P=[['Trastorno de ansiedad generalizada','F41.1','6B00','F41.1'],['Trastorno de pánico','F41.0','6B01','F41.0'],['Agorafobia','F40.0','6B02','F40.00'],['Trastorno de ansiedad social','F40.1','6B04','F40.10'],['Trastorno de ansiedad por separación','F93.0','6B05','F93.0'],['Trastorno de estrés postraumático','F43.1','6B40','F43.10'],['Trastorno obsesivo-compulsivo','F42','6B20','F42.2'],['Trastorno de adaptación','F43.2','6B43','F43.20'],['Trastorno mixto ansioso-depresivo','F41.2','6A73','F41.8','Otro trastorno de ansiedad especificado (ansiedad y depresión mixtas)'],['Trastorno depresivo, episodio único leve','F32.0','6A70.0','F32.0'],['Trastorno depresivo, episodio único moderado','F32.1','6A70.1','F32.1'],['Trastorno depresivo, episodio único grave','F32.2','6A70.3','F32.2'],['Trastorno depresivo recurrente (especifique gravedad)','F33.x','6A71','F33.x'],['Trastorno depresivo persistente (distimia)','F34.1','6A72','F34.1'],['Trastorno depresivo no especificado','F32.9','6A7Z','F32.A'],['Trastorno de adaptación mixto (ansiedad y ánimo deprimido)','F43.2','6B43','F43.23'],['Ansiedad social, solo actuación','F40.1','6B04','F40.10','Trastorno de ansiedad social, solo actuación'],['Fobia específica, tipo situacional (p. ej., volar)','F40.2','6B03','F40.248'],['Trastorno de duelo prolongado','F43.8','6B42','F43.81']];
 const SYS={'CIE-10':1,'CIE-11':2,'DSM-5-TR':3};
-P.forEach((p,i)=>$('dxp').add(new Option(p[0]+' ('+p[1]+')',i)));
+P.forEach((p,i)=>$('dxp').add(new Option(p[0]+' · CIE-10 '+p[1]+' · DSM '+p[3],i)));
 function dxRows(){$('dxl').innerHTML=DX.map((r,i)=>`<div class="dxrow" data-i="${i}"><select data-k="s">${Object.keys(SYS).map(s=>`<option${s===r.s?' selected':''}>${s}</option>`).join('')}</select><input data-k="c" value="${E(r.c)}" placeholder="Código"><input data-k="d" value="${E(r.d)}" placeholder="Descripción"><button class="btn s" data-x="1" type="button" style="margin:0;padding:2px">✕</button></div>`).join('')}
-$('dxl').addEventListener('input',e=>{const r=e.target.closest('.dxrow');if(!r||!e.target.dataset.k)return;DX[+r.dataset.i][e.target.dataset.k]=e.target.value;render()});
+$('dxl').addEventListener('input',e=>{const r=e.target.closest('.dxrow');if(!r||!e.target.dataset.k)return;const rw=DX[+r.dataset.i];rw[e.target.dataset.k]=e.target.value;if(e.target.dataset.k==='s'&&rw.pi!=null){const q=P[rw.pi];rw.c=q[SYS[rw.s]];rw.d=(rw.s==='DSM-5-TR'&&q[4])||q[0];dxRows()}render()});
 $('dxl').addEventListener('click',e=>{if(e.target.dataset.x){DX.splice(+e.target.closest('.dxrow').dataset.i,1);dxRows();render()}});
-$('dxa').onclick=()=>{const p=P[$('dxp').value];if(!p)return;document.querySelectorAll('input.sy:checked').forEach(c=>DX.push({s:c.value,c:p[SYS[c.value]],d:(c.value==='DSM-5-TR'&&p[4])||p[0]}));dxRows();render()};
+$('dxa').onclick=()=>{const p=P[$('dxp').value];if(!p)return;document.querySelectorAll('input.sy:checked').forEach(c=>DX.push({s:c.value,c:p[SYS[c.value]],d:(c.value==='DSM-5-TR'&&p[4])||p[0],pi:+$('dxp').value}));dxRows();render()};
 $('dxm').onclick=()=>{DX.push({s:'CIE-10',c:'',d:''});dxRows();render()};
 let ST,REG='',CON=false,CNX=false,CTX='',HASTA='';
 const CK='cae_clave';
@@ -135,7 +135,7 @@ function stat(t,ok){const e=$('cs');e.textContent=t;e.style.borderColor=ok?'#1a7
 function newId(){const a='ABCDEFGHJKMNPQRSTUVWXYZ23456789';return Array.from(crypto.getRandomValues(new Uint8Array(12)),x=>a[x%a.length]).join('')}
 const fmtId=c=>c.replace(/(.{4})(?=.)/g,'$1-');
 function snapshot(){const p=$('paper'),z=p.style.zoom;p.style.zoom=1;const c=p.cloneNode(true);p.style.zoom=z;c.style.zoom='';const css=document.querySelector('style').textContent;return '<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><style>'+css+'body{margin:0;background:#fff;padding:0}.paper{box-shadow:none;margin:0}</style></head><body>'+c.outerHTML+'</body></html>'}
-function rec(){const dd=$('tC').value.trim();return{codigo:$('qI').value.replace(/-/g,''),estado:'vigente',emision:$('fX').value,vigencia_hasta:HASTA,profesional:$('pN').value.trim(),tp:$('pTP').value.trim(),consultante:($('tG').value?$('tG').value+' ':'')+$('tN').value.trim(),documento:dd?$('tD').value+' N.\u00b0 '+(dd.length>4?'*'.repeat(dd.length-4)+dd.slice(-4):dd):'',animal:$('aN').value.trim(),especie:$('aE').value,raza:$('aR').value.trim(),nacimiento:$('aB').value,sexo:$('aS').value,contextos:CTX,copia:$('cC').checked?snapshot():''}}
+function rec(){const dd=$('tC').value.trim();return{codigo:$('qI').value.replace(/-/g,''),estado:'vigente',emision:$('fX').value,vigencia_hasta:HASTA,profesional:$('pN').value.trim(),tp:$('pTP').value.trim(),consultante:($('tG').value?$('tG').value+' ':'')+$('tN').value.trim(),nac_consultante:$('tB').value,documento:dd?$('tD').value+' N.\u00b0 '+(dd.length>4?'*'.repeat(dd.length-4)+dd.slice(-4):dd):'',animal:$('aN').value.trim(),especie:$('aE').value,raza:$('aR').value.trim(),color:$('aCo').value.trim(),nacimiento:$('aB').value,sexo:$('aS').value,contextos:CTX,copia:$('cC').checked?snapshot():''}}
 async function conectar(){if(CNX)return;if(!url_()){stat('Falta configurar config.js',false);return}CNX=true;stat('Conectando… (puede tardar unos segundos)',true);try{await conectar2()}finally{CNX=false}}
 async function conectar2(){
  if(!FBC.apiKey||String(FBC.apiKey).startsWith('PEGUE')){stat('Falta configurar config.js',false);return}
@@ -167,13 +167,14 @@ $('body').innerHTML='<div id="bdi">'+`
  <div class="sub">A QUIEN PUEDA INTERESAR</div><div class="rule"></div>
  <p>Yo, ${v('pN','nombre del profesional')}, ${ps}${$('pX').value.trim()?' y '+E($('pX').value.trim().toLowerCase()):''} ${fem?'identificada':'identificado'} con tarjeta profesional N.° ${v('pTP','T.P.')} expedida por el Colegio Colombiano de Psicólogos (COLPSIC), en ejercicio de mi profesión y conforme a la Ley 1090 de 2006,</p>
  <div class="cert">CERTIFICO</div>
- <p>Que ${ti?ti+' ':''}<b>${v('tN','nombre del consultante')}</b>, ${tid} con ${E($('tD').value)} N.° ${v('tC','documento')}, fue ${val} mediante proceso de evaluación psicológica realizado el ${fd($('fE').value,'fecha de evaluación')}, que incluyó entrevista clínica y, cuando fue pertinente, la aplicación de instrumentos psicológicos, cuyos soportes reposan en su historia clínica y están sujetos a reserva profesional.</p>
+ <p>Que ${ti?ti+' ':''}<b>${v('tN','nombre del consultante')}</b>, ${tid} con ${E($('tD').value)} N.° ${v('tC','documento')}${$('tB').value?', '+(ti==='Sra.'?'nacida':ti==='Sr.'?'nacido':'nacido(a)')+' el '+fd($('tB').value,''):''}, fue ${val} mediante proceso de evaluación psicológica realizado el ${fd($('fE').value,'fecha de evaluación')}, que incluyó entrevista clínica y, cuando fue pertinente, la aplicación de instrumentos psicológicos, cuyos soportes reposan en su historia clínica y están sujetos a reserva profesional.</p>
  <p>Como resultado, se determina que presenta una condición de salud mental documentada en su historia clínica${dx}, así como la necesidad de que cuente con la presencia de su animal de soporte emocional como parte del tratamiento, manejo o estabilización de dicha condición, contribuyendo a la regulación emocional y a la prevención de síntomas agudos, en los términos del artículo 687 del Código Civil, modificado por la Ley 2473 de 2025.</p>${dxb}
- <div class="an"><div><b>Nombre del animal:</b> ${v('aN','nombre')}</div><div><b>Especie:</b> ${E($('aE').value)}</div><div><b>Raza:</b> ${v('aR','raza')}</div><div><b>Fecha de nacimiento:</b> ${fb($('aB').value)}</div>${$('aS').value?'<div><b>Sexo:</b> '+E($('aS').value)+'</div>':''}${$('aM').value.trim()?'<div><b>Microchip:</b> '+E($('aM').value.trim())+'</div>':''}</div>
+ <div class="an"><div><b>Nombre del animal:</b> ${v('aN','nombre')}</div><div><b>Especie:</b> ${E($('aE').value)}</div><div><b>Raza:</b> ${v('aR','raza')}</div>${$('aCo').value.trim()?'<div><b>'+($('aE').value==='Otro doméstico'?'Coloración':'Pelaje')+':</b> '+E($('aCo').value.trim())+'</div>':''}<div><b>Fecha de nacimiento:</b> ${fb($('aB').value)}</div>${$('aS').value?'<div><b>Sexo:</b> '+E($('aS').value)+'</div>':''}${$('aM').value.trim()?'<div><b>Microchip:</b> '+E($('aM').value.trim())+'</div>':''}</div>
  ${ul?`<p>Dicha necesidad aplica para el acompañamiento del animal ${ul}, en los términos y condiciones que establezcan la normativa aplicable y cada entidad.</p>`:''}
  ${$('cT').checked?'<p>Se recomienda continuar el proceso psicoterapéutico para el manejo de la sintomatología asociada.</p>':''}
  ${$('ob').value.trim()?'<p>'+E($('ob').value.trim()).replace(/\n/g,'<br>')+'</p>':''}
  <p class="sm">Se hace constar que el animal es doméstico, no hace parte de la fauna silvestre o exótica y no genera provecho económico o comercial. Este documento certifica la recomendación profesional de soporte emocional; <b>no constituye certificado de adiestramiento ni de homologación como animal de asistencia</b>, ni reemplaza el carné de vacunación, el certificado sanitario u otros requisitos que exijan aerolíneas, empresas de transporte o establecimientos. El tutor es responsable del cuidado, control y comportamiento del animal. Vigencia: ${E($('vg').value||'—')} desde su expedición.</p>
+ <p class="nota"><b>Nota aclaratoria:</b> Este certificado se expide a solicitud del interesado y únicamente para acreditar la determinación de soporte emocional de la Ley 2473 de 2025; no constituye dictamen pericial, informe forense ni concepto sobre capacidad, responsabilidad, custodia u otro asunto judicial o administrativo, y la historia clínica permanece sujeta a reserva profesional.</p>
  <p>Se expide a solicitud del interesado el ${fd($('fX').value,'fecha')} en ${v('pC','ciudad')}, Colombia.</p>
  <p style="margin-bottom:0">Atentamente,</p>
  <div class="sg"><div class="f"><div class="fx">${IMG.f?'<img src="'+IMG.f+'">':''}</div><div class="ln"><b>${v('pN','nombre del profesional')}</b><br>${E($('pG').value)}${$('pX').value.trim()?' y '+E($('pX').value.trim().toLowerCase()):''}<br>T.P. N.° ${v('pTP','T.P.')} COLPSIC</div></div>
@@ -191,7 +192,7 @@ function img(inp,key){const f=inp.files[0];if(!f)return;const r=new FileReader()
 document.querySelectorAll('input,select,textarea').forEach(e=>{if(e.type!=='file')e.addEventListener('input',()=>{if(PF.includes(e.id))save();if(e.id==='cD')$('dxz').hidden=!e.checked;render()})});
 $('fF').onchange=e=>img(e.target,'f');$('fS').onchange=e=>img(e.target,'s');
 $('clr').onclick=()=>{IMG={f:'',s:''};$('fF').value='';$('fS').value='';save();render()};
-$('rs').onclick=()=>{['tN','tC','aN','aR','aB','aM','aS','fE','ob'].forEach(k=>$(k).value='');DX=[];dxRows();$('qI').value=fmtId(newId());REG='';$('cD').checked=false;$('cK').checked=false;$('dxz').hidden=true;render()};
+$('rs').onclick=()=>{['tN','tC','tB','aN','aR','aCo','aB','aM','aS','fE','ob'].forEach(k=>$(k).value='');DX=[];dxRows();$('qI').value=fmtId(newId());REG='';$('cD').checked=false;$('cK').checked=false;$('dxz').hidden=true;render()};
 $('pr').onclick=async()=>{
  if(!CON){alert('Con\u00e9ctese primero: escriba su correo y contrase\u00f1a y pulse Conectar.');return}
  if(!$('tN').value.trim()||!$('aN').value.trim()||!$('pN').value.trim()||!$('pTP').value.trim()){alert('Complete al menos: nombre del profesional, T.P., nombre del consultante y nombre del animal.');return}

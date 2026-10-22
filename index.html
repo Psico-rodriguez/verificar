@@ -22,7 +22,7 @@ details{margin-top:16px;font-size:14px}summary{cursor:pointer;color:#0d4a9e;font
 <div class="in">
 <form id="f"><input type="text" id="c" placeholder="Código, ej. ABCD-EFGH-JKMN" autocomplete="off"><button>Verificar</button></form>
 <div id="r"></div><div id="dt"></div>
-<details><summary>Comprobar que el PDF no fue alterado</summary><p>El archivo no se sube a ningún servidor: la huella (SHA-256) se calcula en su dispositivo.</p><input type="file" id="p" accept="application/pdf"><div id="h"></div></details>
+
 <footer>Para validar la tarjeta profesional, consulte al Colegio Colombiano de Psicólogos (COLPSIC).</footer>
 </div></div>
 <script>
@@ -47,17 +47,11 @@ async function go(){
  if(est==='revocado')$('r').innerHTML=box('no','Certificado REVOCADO','<p>Este certificado fue anulado por el profesional.</p>'+d);
  else if(x.vigencia_hasta&&hoy>x.vigencia_hasta)$('r').innerHTML=box('wa','Certificado auténtico, pero vencido',d);
  else $('r').innerHTML=box('ok','Certificado auténtico y vigente',d);
- if(x.copia)mostrarDoc(x.copia);else $('dt').innerHTML=`<div class="sec"><h3>Consultante</h3><dl><dt>Nombre</dt><dd>${esc(x.consultante||'—')}</dd><dt>Documento</dt><dd>${esc(x.documento||'—')}</dd></dl></div>
- <div class="sec"><h3>Animal de soporte emocional</h3><dl><dt>Nombre</dt><dd>${esc(x.animal||'—')}</dd><dt>Especie</dt><dd>${esc(x.especie||'—')}</dd><dt>Raza</dt><dd>${esc(x.raza||'—')}</dd><dt>Nacimiento</dt><dd>${fb(x.nacimiento)}</dd>${x.sexo?'<dt>Sexo</dt><dd>'+esc(x.sexo)+'</dd>':''}</dl></div>
+ if(x.copia)mostrarDoc(x.copia);else $('dt').innerHTML=`<div class="sec"><h3>Consultante</h3><dl><dt>Nombre</dt><dd>${esc(x.consultante||'—')}</dd><dt>Documento</dt><dd>${esc(x.documento||'—')}</dd>${x.nac_consultante?'<dt>Nacimiento</dt><dd>'+fb(x.nac_consultante)+'</dd>':''}</dl></div>
+ <div class="sec"><h3>Animal de soporte emocional</h3><dl><dt>Nombre</dt><dd>${esc(x.animal||'—')}</dd><dt>Especie</dt><dd>${esc(x.especie||'—')}</dd><dt>Raza</dt><dd>${esc(x.raza||'—')}</dd>${x.color?'<dt>Pelaje / coloración</dt><dd>'+esc(x.color)+'</dd>':''}<dt>Nacimiento</dt><dd>${fb(x.nacimiento)}</dd>${x.sexo?'<dt>Sexo</dt><dd>'+esc(x.sexo)+'</dd>':''}</dl></div>
  <div class="sec"><h3>Determinación profesional</h3><p style="margin:0">El profesional determinó la necesidad de que la persona cuente con su animal de soporte emocional como parte del tratamiento, manejo o estabilización de una condición de salud mental documentada, en los términos de la Ley 2473 de 2025.${x.contextos?' Acompañamiento '+esc(x.contextos)+', según las condiciones de cada entidad.':''}</p></div>`;
 }
 $('f').onsubmit=e=>{e.preventDefault();go()};
 const q=new URLSearchParams(location.search).get('c');if(q){$('c').value=q;go()}
-$('p').onchange=async e=>{const f=e.target.files[0];if(!f)return;
- const b=await crypto.subtle.digest('SHA-256',await f.arrayBuffer()),h=Array.from(new Uint8Array(b),x=>x.toString(16).padStart(2,'0')).join('');
- let m=`<p>Huella del archivo:<br><code>${h}</code></p>`;
- if(!cur)m+='<p>Verifique primero el código del certificado para comparar.</p>';
- else if(!cur.hash)m+='<p>Este certificado no tiene huella registrada.</p>';
- else m+=String(cur.hash).toLowerCase()===h?'<p><b>✔ El archivo coincide con el original registrado.</b></p>':'<p><b>✖ El archivo NO coincide con el original: pudo haber sido alterado.</b></p>';
- $('h').innerHTML=m};
+
 </script></body></html>
