@@ -2,4 +2,4 @@
 const FB = {
   apiKey: "AIzaSyA_6r3eUxYL79TBgZAwB1xcbNGKBCAfj9w",
   projectId: "certificados-psico"
-};
+};const NTFY = "consentimientos-oscar-7k2m9q4x8";
