@@ -55,6 +55,13 @@ input,select,textarea{width:100%;padding:7px 9px;border:1px solid var(--bd);bord
 <label>Firma (imagen)</label><div class="up"><input type="file" id="fF" accept="image/*"><img id="fFi" hidden></div>
 <label>Sello (imagen)</label><div class="up"><input type="file" id="fS" accept="image/*"><img id="fSi" hidden></div>
 <button class="btn s" id="clr" type="button">Quitar firma y sello</button>
+<h2>Consentimientos</h2>
+<button class="btn s" id="cnN" type="button">Crear enlace de consentimiento</button>
+<div id="cnL" class="note" hidden></div>
+<button class="btn s" id="cnR" type="button">Ver consentimientos recibidos</button>
+<button class="btn s" id="cnA" type="button">Activar avisos en este equipo</button>
+<div id="cnX"></div>
+<button class="btn s" id="cnP" type="button">Consentimiento en blanco para imprimir</button>
 <h2>Consultante</h2>
 <div class="r2"><div><label>Tratamiento</label><select id="tG"><option>Sr.</option><option>Sra.</option><option value="">Sin género</option></select></div><div><label>Tipo de documento</label><select id="tD"><option>C.C.</option><option>T.I.</option><option>C.E.</option><option>Pasaporte</option><option>PPT</option></select></div></div>
 <label>Nombre completo</label><input id="tN"><label>N.° de documento</label><input id="tC"><label>Fecha de nacimiento (opcional)</label><input id="tB" type="date">
@@ -121,7 +128,7 @@ $('dxl').addEventListener('input',e=>{const r=e.target.closest('.dxrow');if(!r||
 $('dxl').addEventListener('click',e=>{if(e.target.dataset.x){DX.splice(+e.target.closest('.dxrow').dataset.i,1);dxRows();render()}});
 $('dxa').onclick=()=>{const p=P[$('dxp').value];if(!p)return;document.querySelectorAll('input.sy:checked').forEach(c=>DX.push({s:c.value,c:p[SYS[c.value]],d:(c.value==='DSM-5-TR'&&p[4])||p[0],pi:+$('dxp').value}));dxRows();render()};
 $('dxm').onclick=()=>{DX.push({s:'CIE-10',c:'',d:''});dxRows();render()};
-let ST,REG='',CON=false,CNX=false,CTX='',HASTA='';
+let ST,REG='',CON=false,CNX=false,CTX='',HASTA='',CONS='',CNS=[];
 const CK='cae_clave';
 const FBC=typeof FB==='object'?FB:{};
 const url_=()=>FBC.projectId&&!String(FBC.projectId).startsWith('PEGUE')?FBC.projectId:'';
@@ -135,17 +142,60 @@ function stat(t,ok){const e=$('cs');e.textContent=t;e.style.borderColor=ok?'#1a7
 function newId(){const a='ABCDEFGHJKMNPQRSTUVWXYZ23456789';return Array.from(crypto.getRandomValues(new Uint8Array(12)),x=>a[x%a.length]).join('')}
 const fmtId=c=>c.replace(/(.{4})(?=.)/g,'$1-');
 function snapshot(){const p=$('paper'),z=p.style.zoom;p.style.zoom=1;const c=p.cloneNode(true);p.style.zoom=z;c.style.zoom='';const css=document.querySelector('style').textContent;return '<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><style>'+css+'body{margin:0;background:#fff;padding:0}.paper{box-shadow:none;margin:0}</style></head><body>'+c.outerHTML+'</body></html>'}
-function rec(){const dd=$('tC').value.trim();return{codigo:$('qI').value.replace(/-/g,''),estado:'vigente',emision:$('fX').value,vigencia_hasta:HASTA,profesional:$('pN').value.trim(),tp:$('pTP').value.trim(),consultante:($('tG').value?$('tG').value+' ':'')+$('tN').value.trim(),nac_consultante:$('tB').value,documento:dd?$('tD').value+' N.\u00b0 '+(dd.length>4?'*'.repeat(dd.length-4)+dd.slice(-4):dd):'',animal:$('aN').value.trim(),especie:$('aE').value,raza:$('aR').value.trim(),color:$('aCo').value.trim(),nacimiento:$('aB').value,sexo:$('aS').value,contextos:CTX,copia:$('cC').checked?snapshot():''}}
+function rec(){const dd=$('tC').value.trim();return{codigo:$('qI').value.replace(/-/g,''),estado:'vigente',emision:$('fX').value,vigencia_hasta:HASTA,profesional:$('pN').value.trim(),tp:$('pTP').value.trim(),consultante:($('tG').value?$('tG').value+' ':'')+$('tN').value.trim(),nac_consultante:$('tB').value,documento:dd?$('tD').value+' N.\u00b0 '+(dd.length>4?'*'.repeat(dd.length-4)+dd.slice(-4):dd):'',animal:$('aN').value.trim(),especie:$('aE').value,raza:$('aR').value.trim(),color:$('aCo').value.trim(),nacimiento:$('aB').value,sexo:$('aS').value,contextos:CTX,consentimiento:CONS,copia:$('cC').checked?snapshot():''}}
 async function conectar(){if(CNX)return;if(!url_()){stat('Falta configurar config.js',false);return}CNX=true;stat('Conectando… (puede tardar unos segundos)',true);try{await conectar2()}finally{CNX=false}}
 async function conectar2(){
  if(!FBC.apiKey||String(FBC.apiKey).startsWith('PEGUE')){stat('Falta configurar config.js',false);return}
- try{await login();CON=true;stat('Conectado \u2713',true);try{localStorage.setItem('cae_mail',$('qE').value.trim())}catch(e){}
+ try{await login();CON=true;stat('Conectado \u2713',true);cnLista(true);try{localStorage.setItem('cae_mail',$('qE').value.trim())}catch(e){}
   const r=await fs('GET','/perfil/principal',null,TOK);
   if(r.s===200){const p=dec(r.j);if(p.campos){try{const c=JSON.parse(p.campos);PF.forEach(k=>{if(c[k]!=null)$(k).value=c[k]})}catch(e){}}if(p.firma)IMG.f=p.firma;if(p.sello)IMG.s=p.sello;render()}}
  catch(e){CON=false;const m=String(e.message||e);stat(/PASSWORD|EMAIL|CREDENTIAL|INVALID/i.test(m)?'Correo o contrase\u00f1a incorrectos':'No se pudo conectar: '+m,false)}}
 async function cloudSave(){if(!CON)return;try{const campos={};PF.forEach(k=>campos[k]=$(k).value);await login();const r=await fs('PATCH','/perfil/principal',enc({campos:JSON.stringify(campos),firma:IMG.f,sello:IMG.s}),TOK);stat(r.s===200?'Conectado \u2713 perfil guardado':'No se pudo guardar el perfil ('+r.s+')',r.s===200)}catch(e){stat('No se pudo guardar el perfil',false)}}
 function init(){try{$('qE').value=localStorage.getItem('cae_mail')||''}catch(e){}stat('Escriba su correo y contraseña y pulse Conectar',false)}
 $('qK').addEventListener('change',conectar);$('qK').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();conectar()}});$('qB').onclick=conectar;
+function tok(){const a='abcdefghijkmnpqrstuvwxyz23456789';return Array.from(crypto.getRandomValues(new Uint8Array(20)),x=>a[x%a.length]).join('')}
+$('cnN').onclick=async()=>{if(!CON){alert('Conéctese primero.');return}
+ try{const t=tok(),tk=await login(),r=await fs('POST','/invitaciones?documentId='+t,enc({creado:new Date().toISOString()}),tk);
+  if(r.s!==200){alert('No se pudo crear el enlace ('+r.s+'). Revise las reglas de Firestore.');return}
+  const u=location.href.replace(/[#?].*$/,'').replace(/[^/]*$/,'')+'consentimiento.html?t='+t,e=$('cnL');e.hidden=false;
+  e.innerHTML='Enlace para el paciente (un solo uso):<input id="cnU" readonly style="margin-top:6px" value="'+u+'"><button class="btn s" id="cnC" type="button" style="margin-top:6px">Copiar enlace</button>';
+  $('cnC').onclick=()=>{$('cnU').select();try{navigator.clipboard.writeText(u)}catch(x){document.execCommand('copy')}}}
+ catch(e){alert('Sin conexión con la nube.')}};
+async function cnLista(sil){if(!CON)return;
+ try{const tk=await login(),r=await fs('GET','/consentimientos?pageSize=100',null,tk);if(r.s!==200){if(!sil)alert('No se pudo cargar ('+r.s+').');return}
+  CNS=(r.j.documents||[]).map(x=>Object.assign({id:x.name.split('/').pop(),t:x.createTime},dec(x))).sort((a,b)=>b.t.localeCompare(a.t));
+  $('cnX').innerHTML=CNS.length?CNS.map((c,i)=>{const f=c.estado==='firmado',b='class="btn s" type="button" style="margin:0;padding:4px 8px"';return '<div class="dxrow" style="grid-template-columns:1fr auto;margin:8px 0"><span>'+E(c.nombre)+'<br><small>'+E(new Date(c.t).toLocaleString())+' · '+(f?'\u2714 Firmado por ambos':'<b>Pendiente de su firma</b>')+'</small></span><span style="display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end"><button '+b+' data-v="'+i+'">Ver</button><button '+b+' data-u="'+i+'">Usar</button>'+(f?'<button '+b+' data-p="'+i+'">Descargar PDF</button>':'<button class="btn" type="button" style="margin:0;padding:4px 8px" data-f="'+i+'">Firmar</button>')+'</span></div>'}).join(''):'<p class="note">Aún no hay consentimientos recibidos.</p>';
+  const pn=CNS.filter(c=>c.estado!=='firmado').length;PEND=pn;avisoLocal(pn);$('cnR').textContent='Actualizar consentimientos recibidos ('+CNS.length+(pn?' · '+pn+' pendiente'+(pn>1?'s':'')+' de su firma':'')+')'}
+ catch(e){if(!sil)alert('No se pudo cargar los consentimientos.')}}
+$('cnR').onclick=()=>{if(!CON){alert('Conéctese primero.');return}cnLista(false)};
+let PEND=-1;const TT=document.title;
+function avisoLocal(n){document.title=n?'('+n+') '+TT:TT}
+$('cnA').onclick=async()=>{if(!('Notification' in window)){alert('Este navegador no admite avisos.');return}const p=await Notification.requestPermission();alert(p==='granted'?'Avisos activados. Mantenga esta pestaña abierta: se revisa cada 2 minutos.':'No se activaron los avisos. Puede permitirlos desde el candado junto a la dirección.')};
+setInterval(async()=>{if(!CON)return;const prev=PEND;await cnLista(true);if(prev>=0&&PEND>prev){try{if('Notification' in window&&Notification.permission==='granted')new Notification('Nuevo consentimiento firmado',{body:'Tiene '+PEND+' pendiente'+(PEND>1?'s':'')+' de su firma.'});const a=new(window.AudioContext||window.webkitAudioContext)(),o=a.createOscillator();o.connect(a.destination);o.frequency.value=880;o.start();setTimeout(()=>{o.stop();a.close()},300)}catch(e){}}},120000);
+async function cnFirmar(c){if(!IMG.f){alert('Primero suba su firma en el perfil (sección Profesional).');return}
+ if(!$('pN').value.trim()||!$('pTP').value.trim()){alert('Complete su nombre y T.P. en el perfil.');return}
+ if(!confirm('¿Firmar como profesional el consentimiento de '+c.nombre+'?'))return;
+ try{const tk=await login(),m=['firmaProf','firmaProfFecha','profNombre','profTP','estado'].map(k=>'updateMask.fieldPaths='+k).join('&'),r=await fs('PATCH','/consentimientos/'+c.id+'?'+m,enc({firmaProf:IMG.f,firmaProfFecha:new Date().toISOString(),profNombre:$('pN').value.trim(),profTP:$('pTP').value.trim(),estado:'firmado'}),tk);
+  if(r.s!==200){alert('No se pudo firmar ('+r.s+').');return}await cnLista(true);const c2=CNS.find(x=>x.id===c.id);if(c2&&confirm('Consentimiento firmado por ambos. ¿Descargar ahora el PDF para su custodia?'))cnImprimir(c2)}catch(e){alert('Sin conexión con la nube.')}}
+$('cnP').onclick=()=>{window.open(location.href.replace(/[#?].*$/,'').replace(/[^/]*$/,'')+'consentimiento.html?imprimir=1','_blank')};
+function cnVer(c){const w=window.open('','_blank');if(!w){alert('Permita las ventanas emergentes.');return}w.document.write(cnHtml(c));w.document.close()}
+function cnImprimir(c){const t=document.title;document.title='Consentimiento firmado - '+c.nombre;addEventListener('afterprint',()=>{document.title=t},{once:true});const f=document.createElement('iframe');f.style.cssText='position:fixed;right:0;bottom:0;width:0;height:0;border:0';f.onload=()=>setTimeout(()=>{try{f.contentWindow.focus();f.contentWindow.print()}catch(e){alert('Use Ver y luego Imprimir / Guardar PDF.')}},300);document.body.appendChild(f);f.srcdoc=cnHtml(c)}
+function cnHtml(c){
+ const tx=new DOMParser().parseFromString((c.texto||'').replace(/<\/(p|h3|li|ul)>/g,'\n'),'text/html').body.textContent;
+ const fi=/^data:image\/png;base64,[A-Za-z0-9+\/=]+$/.test(c.firma||'')?'<img src="'+c.firma+'" style="max-height:110px">':'(sin firma)';
+ const fp=/^data:image\/(png|jpeg);base64,[A-Za-z0-9+\/=]+$/.test(c.firmaProf||'')?'<img src=\"'+c.firmaProf+'\" style=\"max-height:110px;mix-blend-mode:multiply\">':'(pendiente)';const row=(a,b)=>'<tr><td><b>'+a+'</b></td><td>'+E(b||'—')+'</td></tr>';
+ return '<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><title>Consentimiento firmado</title><style>body{font:14px/1.5 Georgia,serif;max-width:780px;margin:20px auto;padding:0 16px;color:#1b2a41}h1{font-size:20px;color:#0d3b8e}h3{color:#0d3b8e;margin:16px 0 4px}table{border-collapse:collapse;width:100%}td{border:1px solid #b9d6f1;padding:4px 8px;vertical-align:top}pre{white-space:pre-wrap;font:13px/1.5 Georgia,serif}@media print{.np{display:none}}</style></head><body><h1>Consentimiento informado firmado electrónicamente</h1><pre>'+E(tx)+'</pre><h3>Datos del usuario</h3><table>'+row('Nombre',c.nombre)+row('Documento',c.tipoDoc+' '+c.documento)+row('Nacimiento',c.nacimiento)+row('Teléfono',c.telefono)+row('Correo',c.email)+row('Representante',c.repNombre?c.repNombre+' ('+c.repCalidad+', '+c.repDocumento+')':'No aplica')+'</table><h3>Animal</h3><table>'+row('Nombre',c.animal)+row('Especie',c.especie)+row('Raza',c.raza)+row('Pelaje / coloración',c.color)+row('Nacimiento',c.animalNac)+'</table><h3>Autorizaciones</h3><table>'+row('A. QR y copia en línea',c.autorizaQR==='si'?'Sí autoriza':'No autoriza')+row('B. Impresión diagnóstica',c.autorizaDx==='si'?'Sí autoriza':'No autoriza')+'</table><h3>Firma</h3>'+fi+'<p>Recibido (hora del servidor): '+E(new Date(c.t).toLocaleString())+' · Versión del texto: '+E(c.version)+' · Código: '+E(c.id)+'</p><h3>Firma del psicólogo</h3>'+fp+'<p>'+(c.firmaProf?E(c.profNombre)+' · T.P. '+E(c.profTP)+' · Firmado: '+E(new Date(c.firmaProfFecha).toLocaleString()):'Pendiente de la firma del profesional.')+'</p><p class="np"><button onclick="window.print()">Imprimir / Guardar PDF</button></p></body></html>'}
+$('cnX').addEventListener('click',e=>{const d=e.target.dataset;
+ if(d.v!=null){cnVer(CNS[+d.v]);return}
+ if(d.f!=null){cnFirmar(CNS[+d.f]);return}
+ if(d.p!=null){cnImprimir(CNS[+d.p]);return}
+ if(d.u==null)return;const c=CNS[+d.u];
+ const set=(id,v)=>{if(v)$(id).value=v};
+ set('tN',c.nombre);set('tD',c.tipoDoc);set('tC',c.documento);set('tB',c.nacimiento);set('aN',c.animal);set('aE',c.especie);set('aR',c.raza);set('aCo',c.color);set('aB',c.animalNac);
+ const qr=c.autorizaQR==='si';$('cQ').checked=qr;$('cC').checked=qr;
+ if(c.autorizaDx==='si'){$('cK').checked=true}else{$('cD').checked=false;$('cK').checked=false;$('dxz').hidden=true}
+ CONS=c.id;REG='';render();
+ alert('Datos cargados del consentimiento de '+c.nombre+'.\n'+(qr?'Autorizó QR y copia en línea.':'NO autorizó QR ni copia en línea (desactivados).')+'\n'+(c.autorizaDx==='si'?'Autorizó incluir la impresión diagnóstica (usted decide si la incluye).':'NO autorizó incluir la impresión diagnóstica.'))});
 $('qN').onclick=()=>{$('qI').value=fmtId(newId());REG='';render()};
 const SK='cae_prof_v1',PF=['pG','pTP','pN','pT','pC','pM','pX'];
 function save(){try{const o={IMG};PF.forEach(k=>o[k]=$(k).value);localStorage.setItem(SK,JSON.stringify(o))}catch(e){}clearTimeout(ST);ST=setTimeout(cloudSave,1500)}
@@ -192,7 +242,7 @@ function img(inp,key){const f=inp.files[0];if(!f)return;const r=new FileReader()
 document.querySelectorAll('input,select,textarea').forEach(e=>{if(e.type!=='file')e.addEventListener('input',()=>{if(PF.includes(e.id))save();if(e.id==='cD')$('dxz').hidden=!e.checked;render()})});
 $('fF').onchange=e=>img(e.target,'f');$('fS').onchange=e=>img(e.target,'s');
 $('clr').onclick=()=>{IMG={f:'',s:''};$('fF').value='';$('fS').value='';save();render()};
-$('rs').onclick=()=>{['tN','tC','tB','aN','aR','aCo','aB','aM','aS','fE','ob'].forEach(k=>$(k).value='');DX=[];dxRows();$('qI').value=fmtId(newId());REG='';$('cD').checked=false;$('cK').checked=false;$('dxz').hidden=true;render()};
+$('rs').onclick=()=>{['tN','tC','tB','aN','aR','aCo','aB','aM','aS','fE','ob'].forEach(k=>$(k).value='');DX=[];dxRows();$('qI').value=fmtId(newId());REG='';CONS='';$('cD').checked=false;$('cK').checked=false;$('dxz').hidden=true;render()};
 $('pr').onclick=async()=>{
  if(!CON){alert('Con\u00e9ctese primero: escriba su correo y contrase\u00f1a y pulse Conectar.');return}
  if(!$('tN').value.trim()||!$('aN').value.trim()||!$('pN').value.trim()||!$('pTP').value.trim()){alert('Complete al menos: nombre del profesional, T.P., nombre del consultante y nombre del animal.');return}
