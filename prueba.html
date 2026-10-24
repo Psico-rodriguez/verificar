@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DASS-21</title><script src="config.js"></script>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f4f6f9;font:16px/1.5 system-ui,sans-serif;color:#1b2a41;padding:14px}
+main{max-width:760px;margin:auto;background:#fff;border-radius:12px;padding:20px 22px;box-shadow:0 2px 14px rgba(0,0,0,.1)}
+h1{text-align:center;font:700 22px Georgia,serif;margin:4px 0 12px}
+.leg{font-size:14px}.leg b{display:block;margin-top:8px}
+fieldset.it{border:1px solid #d5dce6;border-radius:8px;margin:8px 0;padding:8px 12px}fieldset.it.mal{border-color:#b42318;background:#fdeceb}
+legend{font-size:15px;padding:0 6px}.op{display:flex;gap:8px;margin-top:4px}
+.op label{display:flex;align-items:center;gap:6px;padding:6px 16px;border:1px solid #9fb0c8;border-radius:20px;cursor:pointer;font-size:15px}.op input{margin:0}
+button{background:#1f3b63;color:#fff;border:0;border-radius:8px;padding:12px 20px;font:inherit;font-weight:600;cursor:pointer}
+.m{margin:14px 0;border-left:6px solid;border-radius:8px;padding:12px}.no{background:#fdeceb;border-color:#b42318;color:#7a1810}.ok{background:#e7f6ee;border-color:#1a7f4b;color:#0f4d2d}
+#copia{display:none}body.pm #copia{display:block}body.pm #frm,body.pm #msg,body.pm #fin{display:none!important}
+table{border-collapse:collapse;width:100%}td{border:1px solid #9fb0c8;padding:5px 8px;font-size:14px}
+@media print{@page{size:A4;margin:14mm}button,.np{display:none!important}body{background:#fff;padding:0}main{box-shadow:none}}
+</style></head><body><main>
+<h1>DASS-21</h1>
+<div id="msg"></div>
+<div id="frm" hidden>
+<div class="leg">Por favor lea las siguientes afirmaciones y elija un número (0, 1, 2, 3) que indica en qué grado le ha ocurrido a usted esta afirmación durante la semana pasada. La escala de calificación es la siguiente:<b>0: No me ha ocurrido; 1: Me ha ocurrido un poco, o durante parte del tiempo; 2: Me ha ocurrido bastante, o durante una buena parte del tiempo; 3: Me ha ocurrido mucho, o la mayor parte del tiempo.</b></div>
+<div id="items"></div>
+<p style="text-align:center"><button id="env" type="button">Enviar</button></p></div>
+<div id="fin" hidden></div><div id="copia"></div></main>
+<script>
+const $=i=>document.getElementById(i);const FBC=typeof FB==='object'?FB:{};const T=new URLSearchParams(location.search).get('t')||'';
+const base='https://firestore.googleapis.com/v1/projects/'+FBC.projectId+'/databases/(default)/documents';
+const msg=(c,t,b)=>{$('msg').innerHTML='<div class="m '+c+'"><b>'+t+'</b><p style="margin:4px 0 0">'+(b||'')+'</p></div>'};
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const ITEMS=["Me ha costado mucho descargar la tensión", "Me di cuenta que tenía la boca seca", "No podía sentir ningún sentimiento positivo", "Se me hizo difícil respirar", "Se me hizo difícil tomar la iniciativa para hacer cosas", "Reaccioné exageradamente en ciertas situaciones", "Sentí que mis manos temblaban", "He sentido que estaba gastando una gran cantidad de energía", "Estaba preocupado por situaciones en las cuales podía tener pánico o en las que podría hacer el ridículo", "He sentido que no había nada que me ilusionara", "Me he sentido inquieto", "Se me hizo difícil relajarme", "Me sentí triste y deprimido", "No toleré nada que no me permitiera continuar con lo que estaba haciendo", "Sentí que estaba al punto de pánico", "No me pude entusiasmar por nada", "Sentí que valía muy poco como persona", "He tendido a sentirme enfadado con facilidad", "Sentí los latidos de mi corazón a pesar de no haber hecho ningún esfuerzo físico", "Tuve miedo sin razón", "Sentí que la vida no tenía ningún sentido"];let NOM='';
+$('items').innerHTML=ITEMS.map((t,i)=>'<fieldset class="it" id="it'+i+'"><legend>'+(i+1)+'. '+t+'</legend><div class="op">'+[0,1,2,3].map(v=>'<label><input type="radio" name="q'+i+'" value="'+v+'">'+v+'</label>').join('')+'</div></fieldset>').join('');
+(async()=>{if(!FBC.projectId||!T){msg('no','Enlace no válido','Solicite un enlace nuevo al profesional.');return}
+ try{const r=await fetch(base+'/invitaciones/'+encodeURIComponent(T));if(r.status===404||r.status===403){msg('no','Enlace no válido o ya utilizado','Solicite un enlace nuevo al profesional.');return}if(!r.ok)throw 0;
+  const d=await r.json();if(!d.fields||!d.fields.tipo||d.fields.tipo.stringValue!=='dass21'){msg('no','Enlace no válido','Solicite un enlace nuevo al profesional.');return}
+  NOM=(d.fields.nombre&&d.fields.nombre.stringValue)||'(sin nombre)';$('frm').hidden=false}catch(e){msg('no','No se pudo cargar','Intente de nuevo en unos minutos.')}})();
+let LAST=null;
+function notificar(){try{const t='Nueva prueba DASS-21 recibida el '+new Date().toLocaleString('es-CO')+'. Ábrala en su app (sección Pruebas psicométricas).';
+ if(typeof NTFY==='string'&&NTFY&&!/^PEGUE/.test(NTFY)){fetch('https://ntfy.sh/'+encodeURIComponent(NTFY),{method:'POST',mode:'no-cors',body:t}).catch(()=>{})}}catch(e){}
+ try{if(typeof EMAILJS==='object'&&EMAILJS.service&&!/^PEGUE/.test(EMAILJS.service)){fetch('https://api.emailjs.com/api/v1.0/email/send',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({service_id:EMAILJS.service,template_id:EMAILJS.template,user_id:EMAILJS.key,template_params:{fecha:new Date().toLocaleString('es-CO'),mensaje:'Nueva prueba DASS-21 recibida.'}})}).catch(()=>{})}}catch(e){}}
+function imprimirRespuestas(){const R=LAST;if(!R)return;
+ $('copia').innerHTML='<p class="np"><button type="button" onclick="window.print()">Imprimir / Guardar como PDF</button></p><h1>DASS-21</h1><p>'+esc(R.nombre)+' · '+esc(new Date(R.fecha).toLocaleString('es-CO'))+'</p><table>'+ITEMS.map((t,i)=>'<tr><td style="width:34px">'+(i+1)+'</td><td>'+esc(t)+'</td><td style="width:34px;text-align:center"><b>'+esc(R.respuestas[i])+'</b></td></tr>').join('')+'</table>';
+ document.body.classList.add('pm');const t=document.title;document.title='DASS-21 - '+R.nombre;addEventListener('afterprint',()=>{document.body.classList.remove('pm');document.title=t},{once:true});window.print()}
+function mostrarFallo(){$('msg').innerHTML='<div class="m no"><b>No se pudo enviar</b><p style="margin:4px 0 8px">Descargue el PDF con sus respuestas y envíeselo al profesional.</p><button type="button" id="dl">Descargar PDF</button></div>';$('dl').onclick=imprimirRespuestas;scrollTo(0,0)}
+$('env').onclick=async()=>{
+ document.querySelectorAll('fieldset.it').forEach(f=>f.classList.remove('mal'));
+ let res='',falta=-1;for(let i=0;i<21;i++){const c=document.querySelector('input[name=q'+i+']:checked');if(!c){if(falta<0)falta=i;document.getElementById('it'+i).classList.add('mal')}else res+=c.value}
+ if(falta>=0){alert('Falta responder la afirmación '+(falta+1)+'. Las que faltan están marcadas en rojo.');document.getElementById('it'+falta).scrollIntoView({block:'center'});return}
+ const R={version:'dass21-v2',nombre:NOM,respuestas:res,fecha:new Date().toISOString(),estado:'recibida'};
+ LAST=R;const f={};for(const k in R)f[k]={stringValue:String(R[k])};
+ const b=$('env');b.disabled=true;b.textContent='Enviando…';
+ try{const r=await fetch(base+'/pruebas?documentId='+encodeURIComponent(T),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({fields:f})});
+  if(r.ok){notificar();$('msg').innerHTML='';$('frm').hidden=true;$('fin').hidden=false;$('fin').innerHTML='<div class="m ok"><b>Respuestas enviadas. Gracias.</b><p style="margin:6px 0 0;font-size:14px">Si en este momento siente que puede hacerse daño, comuníquese de inmediato con la Línea 106, la Línea 192 (opción 4) o el 123.</p></div>';scrollTo(0,0)}
+  else if(r.status===403||r.status===409){alert('Este enlace ya fue utilizado o no es válido.');mostrarFallo();b.disabled=false;b.textContent='Enviar'}
+  else throw 0}
+ catch(e){mostrarFallo();b.disabled=false;b.textContent='Enviar'}};
+</script></body></html>

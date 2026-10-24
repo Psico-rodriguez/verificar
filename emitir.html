@@ -67,6 +67,12 @@ input,select,textarea{width:100%;padding:7px 9px;border:1px solid var(--bd);bord
 <div id="cnS"></div>
 <button class="btn s" id="cnA" type="button">Activar avisos en este equipo</button>
 <button class="btn s" id="cnP" type="button">Consentimiento en blanco para imprimir</button>
+<h2>Pruebas psicométricas (DASS-21)</h2>
+<label>Nombre del paciente (para identificar la prueba)</label><input id="psNom">
+<button class="btn s" id="psN" type="button">Crear enlace de prueba DASS-21</button>
+<div id="psL" class="note" hidden></div>
+<button class="btn s" id="psR" type="button">Ver pruebas pendientes de revisión</button>
+<div id="psX"></div>
 <h2>Respaldo</h2>
 <button class="btn s" id="bkP" type="button">Descargar respaldo de certificados</button>
 <h2>Consultante</h2>
@@ -153,7 +159,7 @@ function rec(){const dd=$('tC').value.trim();return{codigo:$('qI').value.replace
 async function conectar(){if(CNX)return;if(!url_()){stat('Falta configurar config.js',false);return}CNX=true;stat('Conectando… (puede tardar unos segundos)',true);try{await conectar2()}finally{CNX=false}}
 async function conectar2(){
  if(!FBC.apiKey||String(FBC.apiKey).startsWith('PEGUE')){stat('Falta configurar config.js',false);return}
- try{await login();CON=true;stat('Conectado \u2713',true);cnLista(true);try{localStorage.setItem('cae_mail',$('qE').value.trim())}catch(e){}
+ try{await login();CON=true;stat('Conectado \u2713',true);cnLista(true);psLista(true);try{localStorage.setItem('cae_mail',$('qE').value.trim())}catch(e){}
   const r=await fs('GET','/perfil/principal',null,TOK);
   if(r.s===200){const p=dec(r.j);if(p.campos){try{const c=JSON.parse(p.campos);PF.forEach(k=>{if(c[k]!=null)$(k).value=c[k]})}catch(e){}}if(p.firma)IMG.f=p.firma;if(p.sello)IMG.s=p.sello;render()}}
  catch(e){CON=false;const m=String(e.message||e);stat(/PASSWORD|EMAIL|CREDENTIAL|INVALID/i.test(m)?'Correo o contrase\u00f1a incorrectos':'No se pudo conectar: '+m,false)}}
@@ -186,18 +192,52 @@ async function cnCargar(id){try{const tk=await login(),r=await fs('GET','/consen
 const norm=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim();
 function lev(a,b){const m=a.length,n=b.length;if(!m)return n;if(!n)return m;let p=Array.from({length:n+1},(_,j)=>j);for(let i=1;i<=m;i++){const c=[i];for(let j=1;j<=n;j++)c[j]=Math.min(p[j]+1,c[j-1]+1,p[j-1]+(a[i-1]===b[j-1]?0:1));p=c}return p[n]}
 function simil(q,nombre){const qt=norm(q).split(' ').filter(Boolean),nt=norm(nombre).split(' ').filter(Boolean);if(!qt.length||!nt.length)return 0;let tot=0;for(const t of qt){let best=0;for(const w of nt){const s=(w.startsWith(t)||(w.includes(t)&&t.length>=3))?1:1-lev(t,w)/Math.max(t.length,w.length);if(s>best)best=s}tot+=best}return tot/qt.length}
-async function cnIndice(){const out=[];let pt='';for(let i=0;i<20;i++){const tk=await login(),r=await fs('GET','/consentimientos?pageSize=300&mask.fieldPaths=nombre&mask.fieldPaths=estado&mask.fieldPaths=documento'+(pt?'&pageToken='+encodeURIComponent(pt):''),null,tk);if(r.s!==200)throw new Error(r.s);(r.j.documents||[]).forEach(x=>out.push(Object.assign({id:x.name.split('/').pop(),t:x.createTime},dec(x))));pt=r.j.nextPageToken;if(!pt)break}NOMS=out;NOMS_T=Date.now()}
+async function cnIndice(){const out=[];let pt='';for(let i=0;i<20;i++){const tk=await login(),r=await fs('GET','/consentimientos?pageSize=300&mask.fieldPaths=nombre&mask.fieldPaths=estado&mask.fieldPaths=documento'+(pt?'&pageToken='+encodeURIComponent(pt):''),null,tk);if(r.s!==200)throw new Error(r.s);(r.j.documents||[]).forEach(x=>out.push(Object.assign({id:x.name.split('/').pop(),t:x.createTime},dec(x))));pt=r.j.nextPageToken;if(!pt)break}try{pt='';for(let i=0;i<20;i++){const tk=await login(),r=await fs('GET','/pruebas?pageSize=300&mask.fieldPaths=nombre&mask.fieldPaths=estado&mask.fieldPaths=documento'+(pt?'&pageToken='+encodeURIComponent(pt):''),null,tk);if(r.s!==200)break;(r.j.documents||[]).forEach(x=>out.push(Object.assign({k:'p',id:x.name.split('/').pop(),t:x.createTime},dec(x))));pt=r.j.nextPageToken;if(!pt)break}}catch(e){}
+NOMS=out;NOMS_T=Date.now()}
 $('cnB').onclick=async()=>{if(!CON){alert('Conéctese primero.');return}const q=$('cnQ').value.trim();if(!q)return;
  try{if(!NOMS||Date.now()-NOMS_T>600000){$('cnS').innerHTML='<p class="note">Buscando\u2026</p>';await cnIndice()}
   const nq=norm(q),res=NOMS.map(c=>({c,s:Math.max(simil(q,c.nombre),(nq.length>=4&&norm(c.documento).includes(nq))?1:0)})).filter(x=>x.s>=0.6).sort((a,b)=>b.s-a.s).slice(0,15);
-  $('cnS').innerHTML=res.length?res.map(x=>fila(x.c,Math.round(x.s*100))).join(''):'<p class="note">Sin coincidencias para "'+E(q)+'".</p>'}
+  $('cnS').innerHTML=res.length?res.map(x=>x.c.k==='p'?filaP(x.c,Math.round(x.s*100)):fila(x.c,Math.round(x.s*100))).join(''):'<p class="note">Sin coincidencias para "'+E(q)+'".</p>'}
  catch(e){$('cnS').innerHTML='';alert('No se pudo buscar ('+(e.message||e)+').')}};
 $('cnQ').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();$('cnB').click()}});
 $('cnR').onclick=()=>{if(!CON){alert('Conéctese primero.');return}cnLista(false)};
-let PEND=-1;const TT=document.title;
-function avisoLocal(n){document.title=n?'('+n+') '+TT:TT}
+let PEND=-1,PEND2=-1;const TT=document.title;
+function avisoLocal(){const n=Math.max(PEND,0)+Math.max(PEND2,0);document.title=n?'('+n+') '+TT:TT}
 $('cnA').onclick=async()=>{if(!('Notification' in window)){alert('Este navegador no admite avisos.');return}const p=await Notification.requestPermission();alert(p==='granted'?'Avisos activados. Mantenga esta pestaña abierta: se revisa cada 2 minutos.':'No se activaron los avisos. Puede permitirlos desde el candado junto a la dirección.')};
-setInterval(async()=>{if(!CON)return;const prev=PEND;await cnLista(true);if(prev>=0&&PEND>prev){try{if('Notification' in window&&Notification.permission==='granted')new Notification('Nuevo consentimiento firmado',{body:'Tiene '+PEND+' pendiente'+(PEND>1?'s':'')+' de su firma.'});const a=new(window.AudioContext||window.webkitAudioContext)(),o=a.createOscillator();o.connect(a.destination);o.frequency.value=880;o.start();setTimeout(()=>{o.stop();a.close()},300)}catch(e){}}},120000);
+setInterval(async()=>{if(!CON)return;const prev=PEND,prev2=PEND2;await cnLista(true);await psLista(true);if((prev>=0&&PEND>prev)||(prev2>=0&&PEND2>prev2)){try{if('Notification' in window&&Notification.permission==='granted')new Notification('Nueva actividad de pacientes',{body:'Consentimientos por firmar: '+PEND+' · Pruebas por revisar: '+PEND2});const a=new(window.AudioContext||window.webkitAudioContext)(),o=a.createOscillator();o.connect(a.destination);o.frequency.value=880;o.start();setTimeout(()=>{o.stop();a.close()},300)}catch(e){}}},120000);
+const DASS_IT=["Me ha costado mucho descargar la tensión", "Me di cuenta que tenía la boca seca", "No podía sentir ningún sentimiento positivo", "Se me hizo difícil respirar", "Se me hizo difícil tomar la iniciativa para hacer cosas", "Reaccioné exageradamente en ciertas situaciones", "Sentí que mis manos temblaban", "He sentido que estaba gastando una gran cantidad de energía", "Estaba preocupado por situaciones en las cuales podía tener pánico o en las que podría hacer el ridículo", "He sentido que no había nada que me ilusionara", "Me he sentido inquieto", "Se me hizo difícil relajarme", "Me sentí triste y deprimido", "No toleré nada que no me permitiera continuar con lo que estaba haciendo", "Sentí que estaba al punto de pánico", "No me pude entusiasmar por nada", "Sentí que valía muy poco como persona", "He tendido a sentirme enfadado con facilidad", "Sentí los latidos de mi corazón a pesar de no haber hecho ningún esfuerzo físico", "Tuve miedo sin razón", "Sentí que la vida no tenía ningún sentido"],DASS_E={D:[3,5,10,13,16,17,21],A:[2,4,7,9,15,19,20],S:[1,6,8,11,12,14,18]};
+let PS=[];
+function psPuntajes(r){const g=k=>DASS_E[k].reduce((s,i)=>s+(+r[i-1]||0),0),D=g('D'),A=g('A'),S=g('S');return{D,A,S,total:D+A+S}}
+function psHtml(p){const r=String(p.respuestas||''),s=psPuntajes(r),f=x=>new Date(x).toLocaleString('es-CO');
+ const filas=DASS_IT.map((t,i)=>'<tr><td style="width:30px">'+(i+1)+'.</td><td>'+E(t)+'</td><td style="white-space:nowrap">'+[0,1,2,3].map(v=>'<span class="n'+(r[i]==v?' c':'')+'">'+v+'</span>').join('')+'</td></tr>').join('');
+ return '<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><title>DASS-21 - '+E(p.nombre)+'</title><style>@page{size:A4;margin:14mm}body{font:13.5px/1.5 Georgia,serif;color:#111;max-width:760px;margin:18px auto;padding:0 16px}h1{text-align:center;font-size:20px;margin:6px 0}table{border-collapse:collapse;width:100%;margin:8px 0}td,th{border-bottom:1px solid #ccc;padding:4px 6px;text-align:left;font-size:13px}.n{display:inline-block;width:22px;height:22px;line-height:20px;text-align:center;margin:0 3px;border-radius:50%;border:2px solid transparent}.c{border-color:#000;font-weight:bold}.sc td,.sc th{border:1px solid #999;text-align:center;font-size:14px}@media print{.np{display:none!important}}</style></head><body><p class="np"><button onclick="window.print()">Imprimir / Guardar PDF</button></p><h1>DASS-21</h1><p><b>Nombre:</b> '+E(p.nombre)+' &nbsp;·&nbsp; <b>Fecha:</b> '+E(p.t?f(p.t):'—')+'</p><table>'+filas+'</table><table class="sc"><tr><th>Depresión</th><th>Ansiedad</th><th>Estrés</th><th>Total</th></tr><tr><td><b>'+s.D+'</b></td><td><b>'+s.A+'</b></td><td><b>'+s.S+'</b></td><td><b>'+s.total+'</b></td></tr></table></body></html>'}
+const filaP=(c,pct)=>{const rv=c.estado==='revisada',b='class="btn s" type="button" style="margin:0;padding:4px 8px"',id=E(c.id);return '<div class="dxrow" style="grid-template-columns:1fr auto;margin:8px 0"><span>'+E(c.nombre||'')+'<br><small>'+E(new Date(c.t).toLocaleString())+' \u00b7 DASS-21 \u00b7 '+(rv?'\u2714 Revisada':'<b>Pendiente de revisi\u00f3n</b>')+(pct?' \u00b7 '+pct+'% de coincidencia':'')+'</small></span><span style="display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end"><button '+b+' data-a="tv" data-id="'+id+'">Ver prueba</button><button '+b+' data-a="tp" data-id="'+id+'">Descargar PDF</button>'+(rv?'':'<button class="btn" type="button" style="margin:0;padding:4px 8px" data-a="tr" data-id="'+id+'">Marcar revisada</button>')+'</span></div>'};
+async function psLista(sil){if(!CON)return;
+ try{const r=await qry({from:[{collectionId:'pruebas'}],where:{fieldFilter:{field:{fieldPath:'estado'},op:'EQUAL',value:{stringValue:'recibida'}}},select:{fields:['nombre','estado'].map(f=>({fieldPath:f}))},limit:100});
+  if(r.s!==200){if(!sil)alert('No se pudo cargar las pruebas ('+r.s+'). Revise las reglas de Firestore.');return}
+  PS=r.j.filter(x=>x.document).map(x=>Object.assign({id:x.document.name.split('/').pop(),t:x.document.createTime},dec(x.document))).sort((a,b)=>b.t.localeCompare(a.t));
+  $('psX').innerHTML=PS.length?PS.map(c=>filaP(c)).join(''):'<p class="note">No hay pruebas pendientes de revisi\u00f3n.</p>';
+  PEND2=PS.length;avisoLocal();$('psR').textContent='Actualizar pruebas pendientes ('+PS.length+')'}
+ catch(e){if(!sil)alert('No se pudo cargar las pruebas.')}}
+async function psCargar(id){try{const tk=await login(),r=await fs('GET','/pruebas/'+encodeURIComponent(id),null,tk);if(r.s!==200)return null;return Object.assign({id,t:r.j.createTime},dec(r.j))}catch(e){return null}}
+function psVer(p,w0){const w=w0||window.open('','_blank');if(!w){alert('Permita las ventanas emergentes.');return}w.document.write(psHtml(p));w.document.close()}
+function psImprimir(p){const t=document.title;document.title='DASS-21 - '+p.nombre;addEventListener('afterprint',()=>{document.title=t},{once:true});const f=document.createElement('iframe');f.style.cssText='position:fixed;right:0;bottom:0;width:0;height:0;border:0';f.onload=()=>setTimeout(()=>{try{f.contentWindow.focus();f.contentWindow.print()}catch(e){alert('Use Ver prueba y luego Imprimir / Guardar PDF.')}},300);document.body.appendChild(f);f.srcdoc=psHtml(p)}
+async function psRevisada(p){if(!confirm('\u00bfMarcar como revisada la prueba de '+p.nombre+'?'))return;
+ try{const tk=await login(),m=['estado','revisada'].map(k=>'updateMask.fieldPaths='+k).join('&'),r=await fs('PATCH','/pruebas/'+p.id+'?'+m,enc({estado:'revisada',revisada:new Date().toISOString()}),tk);
+  if(r.s!==200){alert('No se pudo actualizar ('+r.s+').');return}NOMS=null;await psLista(true);
+  if(confirm('Prueba marcada como revisada. \u00bfDescargar ahora el PDF para su custodia?'))psImprimir(Object.assign({},p,{estado:'revisada'}))}catch(e){alert('Sin conexi\u00f3n con la nube.')}}
+async function psAccion(e){const d=e.target.dataset;if(!d.a||d.a[0]!=='t')return;let w=null;if(d.a==='tv')w=window.open('','_blank');
+ const p=await psCargar(d.id);if(!p){if(w)w.close();alert('No se pudo cargar la prueba.');return}
+ if(d.a==='tv')psVer(p,w);else if(d.a==='tp')psImprimir(p);else if(d.a==='tr')psRevisada(p)}
+$('psX').addEventListener('click',psAccion);
+$('psR').onclick=()=>{if(!CON){alert('Conéctese primero.');return}psLista(false)};
+$('psN').onclick=async()=>{if(!CON){alert('Conéctese primero.');return}const nom=$('psNom').value.trim();if(!nom){alert('Escriba el nombre del paciente para identificar la prueba.');return}
+ try{const t=tok(),tk=await login(),r=await fs('POST','/invitaciones?documentId='+t,enc({creado:new Date().toISOString(),tipo:'dass21',nombre:nom}),tk);
+  if(r.s!==200){alert('No se pudo crear el enlace ('+r.s+'). Revise las reglas de Firestore.');return}
+  const u=location.href.replace(/[#?].*$/,'').replace(/[^/]*$/,'')+'prueba.html?t='+t,e=$('psL');e.hidden=false;
+  e.innerHTML='Enlace de la prueba DASS-21 (un solo uso):<input id="psU" readonly style="margin-top:6px" value="'+u+'"><button class="btn s" id="psC" type="button" style="margin-top:6px">Copiar enlace</button>';
+  $('psC').onclick=()=>{$('psU').select();try{navigator.clipboard.writeText(u)}catch(x){document.execCommand('copy')}}}
+ catch(e){alert('Sin conexión con la nube.')}};
 $('bkP').onclick=async()=>{if(!CON){alert('Conéctese primero.');return}
  const b=$('bkP');b.disabled=true;let n=0,parte=1,acc=[],pt='';
  const bajar=()=>{if(!acc.length)return;const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(acc)],{type:'application/json'}));a.download='respaldo-certificados-'+new Date().toISOString().slice(0,10)+'-parte'+parte+'.json';document.body.appendChild(a);a.click();a.remove();parte++;acc=[]};
@@ -224,7 +264,7 @@ function cnUsar(c){const set=(id,v)=>{if(v)$(id).value=v};
  if(c.autorizaDx==='si'){$('cK').checked=true}else{$('cD').checked=false;$('cK').checked=false;$('dxz').hidden=true}
  CONS=c.id;REG='';render();
  alert('Datos cargados del consentimiento de '+c.nombre+'.\n'+(qr?'Autorizó QR y copia en línea.':'NO autorizó QR ni copia en línea (desactivados).')+'\n'+(c.autorizaDx==='si'?'Autorizó incluir la impresión diagnóstica (usted decide si la incluye).':'NO autorizó incluir la impresión diagnóstica.'))}
-async function cnAccion(e){const d=e.target.dataset;if(!d.a)return;let w=null;if(d.a==='v')w=window.open('','_blank');
+async function cnAccion(e){const d=e.target.dataset;if(!d.a)return;if(d.a[0]==='t'){psAccion(e);return}let w=null;if(d.a==='v')w=window.open('','_blank');
  const c=await cnCargar(d.id);if(!c){if(w)w.close();alert('No se pudo cargar el consentimiento.');return}
  if(d.a==='v')cnVer(c,w);else if(d.a==='p')cnImprimir(c);else if(d.a==='f')cnFirmar(c);else if(d.a==='u')cnUsar(c)}
 ['cnX','cnS','cnZ'].forEach(i=>$(i).addEventListener('click',cnAccion));
