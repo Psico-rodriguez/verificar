@@ -135,7 +135,7 @@ $('dxl').addEventListener('input',e=>{const r=e.target.closest('.dxrow');if(!r||
 $('dxl').addEventListener('click',e=>{if(e.target.dataset.x){DX.splice(+e.target.closest('.dxrow').dataset.i,1);dxRows();render()}});
 $('dxa').onclick=()=>{const p=P[$('dxp').value];if(!p)return;document.querySelectorAll('input.sy:checked').forEach(c=>DX.push({s:c.value,c:p[SYS[c.value]],d:(c.value==='DSM-5-TR'&&p[4])||p[0],pi:+$('dxp').value}));dxRows();render()};
 $('dxm').onclick=()=>{DX.push({s:'CIE-10',c:'',d:''});dxRows();render()};
-let ST,REG='',CON=false,CNX=false,CTX='',HASTA='',CONS='',CNS=[];
+let ST,REG='',CON=false,CNX=false,CTX='',HASTA='',CONS='',CNS=[],REGK='';
 const CK='cae_clave';
 const FBC=typeof FB==='object'?FB:{};
 const url_=()=>FBC.projectId&&!String(FBC.projectId).startsWith('PEGUE')?FBC.projectId:'';
@@ -279,12 +279,12 @@ $('pr').onclick=async()=>{
  if(!CON){alert('Con\u00e9ctese primero: escriba su correo y contrase\u00f1a y pulse Conectar.');return}
  if(!$('tN').value.trim()||!$('aN').value.trim()||!$('pN').value.trim()||!$('pTP').value.trim()){alert('Complete al menos: nombre del profesional, T.P., nombre del consultante y nombre del animal.');return}
  const b=$('pr');b.disabled=true;b.textContent='Registrando\u2026';
- try{const R=(render(),rec()),tok=await login(),id=R.codigo;let r;
+ try{const K=$('tN').value.trim().toLowerCase()+'|'+$('tC').value.trim();if(REG&&REG===$('qI').value&&REGK&&REGK!==K){$('qI').value=fmtId(newId());REG='';alert('Cambió el consultante: se generó un código nuevo para este certificado.')}const R=(render(),rec()),tok=await login(),id=R.codigo;let r;
   if(REG&&REG===$('qI').value){const m=Object.keys(R).filter(k=>k!=='codigo'&&k!=='estado').map(k=>'updateMask.fieldPaths='+k).join('&');r=await fs('PATCH','/certificados/'+id+'?'+m,enc(R),tok)}
   else r=await fs('POST','/certificados?documentId='+id,enc(Object.assign({hash:''},R)),tok);
   if(r.s===409){alert('Ese c\u00f3digo ya existe. Pulse "Nuevo" e intente de nuevo.');return}
   if(r.s!==200){alert('No se pudo registrar (error '+r.s+'). Revise las reglas de Firestore.');return}
-  REG=$('qI').value;stat('Registrado en la nube \u2713 '+REG,true);setTimeout(()=>{try{window.print()}catch(e){alert('Use Ctrl/Cmd + P para guardar como PDF.')}},200)}
+  REG=$('qI').value;REGK=K;stat('Registrado en la nube \u2713 '+REG,true);setTimeout(()=>{try{window.print()}catch(e){alert('Use Ctrl/Cmd + P para guardar como PDF.')}},200)}
  catch(e){alert('Sin conexi\u00f3n con la nube. El certificado NO fue registrado.')}
  finally{b.disabled=false;b.textContent='Registrar en la nube y descargar PDF'}};
 window.addEventListener('resize',fit);
