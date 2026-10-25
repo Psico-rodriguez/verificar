@@ -68,11 +68,12 @@ input,select,textarea{width:100%;padding:7px 9px;border:1px solid var(--bd);bord
 <button class="btn s" id="cnA" type="button">Activar avisos en este equipo</button>
 <button class="btn s" id="cnP" type="button">Consentimiento en blanco para imprimir</button>
 <h2>Pruebas psicométricas (DASS-21)</h2>
-<label>Nombre del paciente (para identificar la prueba)</label><input id="psNom">
+<label>Nombre del paciente (opcional: el paciente podrá confirmarlo)</label><input id="psNom">
 <button class="btn s" id="psN" type="button">Crear enlace de prueba DASS-21</button>
 <div id="psL" class="note" hidden></div>
 <button class="btn s" id="psR" type="button">Ver pruebas pendientes de revisión</button>
 <div id="psX"></div>
+<button class="btn s" id="psP" type="button">DASS-21 en blanco para imprimir</button>
 <h2>Respaldo</h2>
 <button class="btn s" id="bkP" type="button">Descargar respaldo de certificados</button>
 <h2>Consultante</h2>
@@ -231,13 +232,14 @@ async function psAccion(e){const d=e.target.dataset;if(!d.a||d.a[0]!=='t')return
  if(d.a==='tv')psVer(p,w);else if(d.a==='tp')psImprimir(p);else if(d.a==='tr')psRevisada(p)}
 $('psX').addEventListener('click',psAccion);
 $('psR').onclick=()=>{if(!CON){alert('Conéctese primero.');return}psLista(false)};
-$('psN').onclick=async()=>{if(!CON){alert('Conéctese primero.');return}const nom=$('psNom').value.trim();if(!nom){alert('Escriba el nombre del paciente para identificar la prueba.');return}
+$('psN').onclick=async()=>{if(!CON){alert('Conéctese primero.');return}const nom=$('psNom').value.trim();
  try{const t=tok(),tk=await login(),r=await fs('POST','/invitaciones?documentId='+t,enc({creado:new Date().toISOString(),tipo:'dass21',nombre:nom}),tk);
   if(r.s!==200){alert('No se pudo crear el enlace ('+r.s+'). Revise las reglas de Firestore.');return}
   const u=location.href.replace(/[#?].*$/,'').replace(/[^/]*$/,'')+'prueba.html?t='+t,e=$('psL');e.hidden=false;
   e.innerHTML='Enlace de la prueba DASS-21 (un solo uso):<input id="psU" readonly style="margin-top:6px" value="'+u+'"><button class="btn s" id="psC" type="button" style="margin-top:6px">Copiar enlace</button>';
   $('psC').onclick=()=>{$('psU').select();try{navigator.clipboard.writeText(u)}catch(x){document.execCommand('copy')}}}
  catch(e){alert('Sin conexión con la nube.')}};
+$('psP').onclick=()=>window.open(location.href.replace(/[#?].*$/,'').replace(/[^/]*$/,'')+'prueba.html?imprimir=1','_blank');
 $('bkP').onclick=async()=>{if(!CON){alert('Conéctese primero.');return}
  const b=$('bkP');b.disabled=true;let n=0,parte=1,acc=[],pt='';
  const bajar=()=>{if(!acc.length)return;const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(acc)],{type:'application/json'}));a.download='respaldo-certificados-'+new Date().toISOString().slice(0,10)+'-parte'+parte+'.json';document.body.appendChild(a);a.click();a.remove();parte++;acc=[]};
